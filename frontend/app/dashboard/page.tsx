@@ -1,65 +1,8 @@
-// app/dashboard/page.jsx
 'use client';
 
 import { useState } from 'react';
 import Link from 'next/link';
-
-const navItems = [
-  {
-    label: 'Dashboard',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5">
-        <rect x="3" y="3" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.9" />
-        <rect x="14" y="3" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4" />
-        <rect x="3" y="14" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4" />
-        <rect x="14" y="14" width="7" height="7" rx="1.5" fill="currentColor" opacity="0.4" />
-      </svg>
-    ),
-    href: '/dashboard',
-    active: true,
-  },
-  {
-    label: 'History',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="2">
-        <path d="M12 8v4l3 3" strokeLinecap="round" />
-        <path d="M3.05 11a9 9 0 1 1 .5 3" strokeLinecap="round" />
-        <path d="M3 3v5h5" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-    ),
-    href: '/history',
-  },
-  {
-    label: 'Body Temperature',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="2">
-        <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
-      </svg>
-    ),
-    href: '/body-temperature',
-  },
-  {
-    label: 'Manage Helmets',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="10" r="4" />
-        <path d="M5.5 20a8.38 8.38 0 0 1 .9-3.8 8 8 0 0 1 3-2.9A8.31 8.31 0 0 1 12 13c1.57 0 3.08.46 4.35 1.32" strokeLinecap="round" />
-        <path d="M19 17v5M17 19h4" strokeLinecap="round" />
-      </svg>
-    ),
-    href: '/helmets',
-  },
-  {
-    label: 'Profile',
-    icon: (
-      <svg viewBox="0 0 24 24" fill="none" className="w-5 h-5" stroke="currentColor" strokeWidth="2">
-        <circle cx="12" cy="8" r="4" />
-        <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" strokeLinecap="round" />
-      </svg>
-    ),
-    href: '/profile',
-  },
-];
+import Sidebar from '@/components/sidebar';
 
 const rideHistory = [
   { date: 'Oct 24, 2025', time: '07:30 AM', route: 'Coastal Highway Path', distance: '24.8 km', duration: '1h 12m', status: 'Completed' },
@@ -71,59 +14,15 @@ export default function DashboardPage() {
   const [rideActive, setRideActive] = useState(false);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-sans">
-      {/* Sidebar */}
-      <aside className="w-52 shrink-0 bg-white border-r border-gray-100 flex flex-col py-5 px-3 fixed h-full z-10">
-        {/* Logo */}
-        <div className="flex items-center gap-2.5 px-3 mb-8">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #f97316, #3b82f6)' }}>
-            <svg viewBox="0 0 24 24" fill="white" className="w-4 h-4">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
-            </svg>
-          </div>
-          <span className="text-base font-black text-gray-900 tracking-tight">Velofit</span>
-        </div>
+    <div className="flex min-h-screen bg-gray-50">
+      <Sidebar />
 
-        {/* Nav */}
-        <nav className="flex flex-col gap-1 flex-1">
-          {navItems.map((item) => (
-            <Link
-              key={item.label}
-              href={item.href}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
-                item.active
-                  ? 'text-amber-700 bg-amber-50'
-                  : 'text-gray-500 hover:text-gray-800 hover:bg-gray-50'
-              }`}
-            >
-              <span className={item.active ? 'text-amber-600' : 'text-gray-400'}>
-                {item.icon}
-              </span>
-              {item.label}
-            </Link>
-          ))}
-        </nav>
-
-        {/* User */}
-        <div className="flex items-center gap-2.5 px-3 pt-4 border-t border-gray-100">
-          <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-bold text-sm shrink-0">
-            A
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-gray-800 leading-tight">Alex Morgan</p>
-            <p className="text-xs text-gray-400">Pro Rider</p>
-          </div>
-        </div>
-      </aside>
-
-      {/* Main */}
-      <main className="ml-52 flex-1 p-8 overflow-y-auto">
+      {/* Desktop offset + mobile top-bar offset */}
+      <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 p-6 lg:p-8 overflow-y-auto">
         <h1 className="text-3xl font-black text-gray-900 mb-6">Dashboard</h1>
 
         {/* Hero Banner */}
         <div className="relative rounded-2xl overflow-hidden mb-6 h-52 bg-gray-100">
-          {/* Background image placeholder with gradient overlay */}
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
@@ -131,8 +30,6 @@ export default function DashboardPage() {
             }}
           />
           <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(255,255,255,0.95) 45%, transparent 80%)' }} />
-
-          {/* Content */}
           <div className="relative z-10 h-full flex flex-col justify-center px-8 max-w-lg">
             <div className="inline-flex items-center gap-2 mb-3">
               <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
@@ -166,7 +63,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Stats Row */}
-        <div className="grid grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[
             {
               icon: (
@@ -177,7 +74,6 @@ export default function DashboardPage() {
               ),
               label: 'Total Distance',
               value: '124.5 km',
-              accent: '#22c55e',
             },
             {
               icon: (
@@ -188,7 +84,6 @@ export default function DashboardPage() {
               ),
               label: 'Duration',
               value: '12h 45m',
-              accent: '#f59e0b',
             },
             {
               icon: (
@@ -199,7 +94,6 @@ export default function DashboardPage() {
               ),
               label: 'Calories',
               value: '3,420 kcal',
-              accent: '#22c55e',
             },
             {
               icon: (
@@ -211,7 +105,6 @@ export default function DashboardPage() {
               ),
               label: 'Helmet Battery',
               value: '65%',
-              accent: '#f59e0b',
             },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
@@ -223,11 +116,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Middle Row */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* Body Temperature */}
           <div className="bg-white rounded-2xl p-5 border-2 border-red-100 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center">
+              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" className="w-5 h-5">
                   <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
                 </svg>
@@ -239,14 +132,14 @@ export default function DashboardPage() {
             </div>
             <p className="text-4xl font-black text-gray-900 mt-4 mb-3">38.2°C</p>
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full rounded-full bg-gradient-to-r from-red-400 to-red-600" style={{ width: '72%' }} />
+              <div className="h-full rounded-full bg-gradient from-red-400 to-red-600" style={{ width: '72%' }} />
             </div>
           </div>
 
           {/* SOS Status */}
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
             <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                 <svg viewBox="0 0 24 24" fill="#22c55e" className="w-6 h-6">
                   <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
                 </svg>
@@ -266,8 +159,6 @@ export default function DashboardPage() {
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Weekly Target</p>
             <p className="text-xs text-gray-400 mb-4">Progress towards 150km goal</p>
-
-            {/* Arc progress */}
             <div className="flex justify-center mb-3">
               <div className="relative w-24 h-24">
                 <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
@@ -285,7 +176,6 @@ export default function DashboardPage() {
                 </div>
               </div>
             </div>
-
             <div className="flex justify-between text-xs text-gray-400 font-medium">
               <span>124.5 KM DONE</span>
               <span>25.5 KM LEFT</span>
@@ -301,45 +191,39 @@ export default function DashboardPage() {
               View All
             </Link>
           </div>
-
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-50">
-                {['DATE', 'ROUTE', 'DISTANCE', 'DURATION', 'STATUS'].map((col) => (
-                  <th
-                    key={col}
-                    className="px-6 py-3 text-left text-xs font-bold text-gray-400 tracking-widest uppercase"
-                  >
-                    {col}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rideHistory.map((ride, i) => (
-                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <p className="text-sm font-semibold text-gray-800">{ride.date}</p>
-                    <p className="text-xs text-gray-400">{ride.time}</p>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{ride.route}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-gray-900">{ride.distance}</td>
-                  <td className="px-6 py-4 text-sm text-gray-600">{ride.duration}</td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                        ride.status === 'Completed'
-                          ? 'bg-green-100 text-green-700'
-                          : 'bg-red-100 text-red-600'
-                      }`}
-                    >
-                      {ride.status}
-                    </span>
-                  </td>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-560px">
+              <thead>
+                <tr className="border-b border-gray-50">
+                  {['DATE', 'ROUTE', 'DISTANCE', 'DURATION', 'STATUS'].map((col) => (
+                    <th key={col} className="px-6 py-3 text-left text-xs font-bold text-gray-400 tracking-widest uppercase">
+                      {col}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rideHistory.map((ride, i) => (
+                  <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      <p className="text-sm font-semibold text-gray-800">{ride.date}</p>
+                      <p className="text-xs text-gray-400">{ride.time}</p>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{ride.route}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-gray-900">{ride.distance}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{ride.duration}</td>
+                    <td className="px-6 py-4">
+                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
+                        ride.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
+                      }`}>
+                        {ride.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </main>
     </div>

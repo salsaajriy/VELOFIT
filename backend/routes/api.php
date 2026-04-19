@@ -1,46 +1,14 @@
 <?php
 
-use Illuminate\Http\Request;
+use App\Http\Controllers\AuthController;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use App\Models\User;
-use Laravel\Sanctum\HasApiTokens;
 
-Route::post('/register', function (Request $request) {
-    $request->validate([
-        'name' => 'required',
-        'email' => 'required|email|unique:users',
-        'password' => 'required|min:6',
-    ]);
+// ── Public routes (tidak butuh login) ────────────────
+Route::post('/register', [AuthController::class, 'register']);
+Route::post('/login',    [AuthController::class, 'login']);
 
-    User::create([
-        'name' => $request->name,
-        'email' => $request->email,
-        'password' => Hash::make($request->password),
-    ]);
-
-    return response()->json(['message' => 'Registered successfully']);
-});
-
-Route::post('/login', function (Request $request) {
-    if (!Auth::attempt($request->only('email', 'password'))) {
-        return response()->json(['message' => 'Invalid credentials'], 401);
-    }
-
-    $user = Auth::user();
-    $token = $user->createToken('auth_token')->plainTextToken;
-
-    return response()->json([
-        'message' => 'Login successful',
-        'access_token' => $token,
-        'token_type' => 'Bearer',
-    ]);
-});
-
-Route::middleware('auth:sanctum')->get('/user', fn(Request $request) => $request->user());
-
-Route::middleware('auth:sanctum')->post('/logout', function (Request $request) {
-    $request->user()->currentAccessToken()->delete();
-    return response()->json(['message' => 'Logged out successfully']);
+// ── Protected routes (butuh token Bearer) ────────────
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/user',    [AuthController::class, 'user']);
+    Route::post('/logout', [AuthController::class, 'logout']);
 });
