@@ -3,6 +3,8 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use App\Http\Middleware\CheckAdminRole;
+use App\Http\Middleware\CheckUserRole;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,7 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
     $middleware->statefulApi(false);
 
         $middleware->alias([
-            'verified' => \App\Http\Middleware\EnsureEmailIsVerified::class,
+            'role.admin' => CheckAdminRole::class,
+            'role.user' => CheckUserRole::class,
         ]);
 
         //

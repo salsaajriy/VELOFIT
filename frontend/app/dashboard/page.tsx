@@ -19,7 +19,7 @@ export default function DashboardPage() {
 
       {/* Desktop offset + mobile top-bar offset */}
       <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 p-6 lg:p-8 overflow-y-auto">
-        <h1 className="text-3xl font-black text-gray-900 mb-6">Dashboard</h1>
+        <h1 className="text-3xl font-black text-gray-900 my-6">Dashboard</h1>
 
         {/* Hero Banner */}
         <div className="relative rounded-2xl overflow-hidden mb-6 h-52 bg-gray-100">
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-gray-400">Threshold exceeded (37.5°C)</p>
               </div>
             </div>
-            <p className="text-4xl font-black text-gray-900 mt-4 mb-3">38.2°C</p>
+            <p className="text-2xl font-black text-gray-900 mt-4 mb-3">0°C</p>
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
               <div className="h-full rounded-full bg-gradient from-red-400 to-red-600" style={{ width: '72%' }} />
             </div>

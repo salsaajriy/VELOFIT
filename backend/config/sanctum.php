@@ -52,6 +52,9 @@ return [
 
     'expiration' => null,
 
+    //set ke menit misalnya:
+    //'expiration' => 60 * 24, // 12 jam
+
     /*
     |--------------------------------------------------------------------------
     | Token Prefix

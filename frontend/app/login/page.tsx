@@ -134,12 +134,11 @@ export default function Login() {
               Login
             </Link>
             <Link
-              href="/register"
+              href="/registration"
               className="font-dm text-sm font-semibold text-white px-5 py-2 rounded-md transition-colors"
               style={{ backgroundColor: "#b85c08" }}
               onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#9a4d06")}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#b85c08")}
-            >
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#b85c08")}>
               Sign Up
             </Link>
           </div>
@@ -373,10 +372,9 @@ export default function Login() {
               <p className="text-center font-dm text-[0.88rem] mt-5" style={{ color: "#7a7a7a" }}>
                 New to Velofit?{" "}
                 <Link
-                  href="/register"
+                  href="/registration"
                   className="font-bold transition-opacity hover:opacity-75"
-                  style={{ color: "#c45c0a" }}
-                >
+                  style={{ color: "#c45c0a" }}>
                   Create an account
                 </Link>
               </p>
@@ -395,13 +393,13 @@ export default function Login() {
           <span className="font-syne text-sm font-semibold" style={{ color: "#7a7a7a" }}>
             Velofit
           </span>
-          <Link
+          {/* <Link
             href="/contact"
             className="font-dm text-[0.85rem] transition-colors hover:text-gray-900"
             style={{ color: "#7a7a7a" }}
           >
             Contact Us
-          </Link>
+          </Link> */}
           <span className="font-dm text-[0.82rem]" style={{ color: "#9a9a9a" }}>
             © 2026 Velofit. Precision &amp; Safety.
           </span>

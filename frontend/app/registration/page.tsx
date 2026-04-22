@@ -283,8 +283,8 @@ export default function SignupPage() {
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white/60 backdrop-blur-sm px-12 py-5">
         <div className="max-w-screen-xl mx-auto flex items-center justify-between">
-          <span className="text-sm font-bold text-amber-700">Velofit</span>
-          <span className="text-sm text-gray-400">Contact Us</span>
+          <span className="text-sm font-bold text-black">Velofit</span>
+          {/* <span className="text-sm text-gray-400">Contact Us</span> */}
           <span className="text-sm text-gray-400">© 2026 Velofit. Precision &amp; Safety.</span>
         </div>
       </footer>
