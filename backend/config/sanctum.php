@@ -50,10 +50,10 @@ return [
     |
     */
 
-    'expiration' => null,
+    // 'expiration' => null,
 
     //set ke menit misalnya:
-    //'expiration' => 60 * 24, // 12 jam
+    'expiration' => 60 * 24 * 7, // 7 hari
 
     /*
     |--------------------------------------------------------------------------

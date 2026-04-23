@@ -1,12 +1,5 @@
 'use client';
 
-// app/signup/page.jsx
-// ─────────────────────────────────────────────────────────────
-// Signup page yang terhubung ke Laravel API.
-// Setelah register berhasil, token disimpan dan user
-// diarahkan ke dashboard.
-// ─────────────────────────────────────────────────────────────
-
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';

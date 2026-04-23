@@ -73,7 +73,7 @@ export default function DashboardPage() {
                 </svg>
               ),
               label: 'Total Distance',
-              value: '124.5 km',
+              value: '0 km',
             },
             {
               icon: (
@@ -83,7 +83,7 @@ export default function DashboardPage() {
                 </svg>
               ),
               label: 'Duration',
-              value: '12h 45m',
+              value: '0m',
             },
             {
               icon: (
@@ -93,7 +93,7 @@ export default function DashboardPage() {
                 </svg>
               ),
               label: 'Calories',
-              value: '3,420 kcal',
+              value: '0 kcal',
             },
             {
               icon: (
@@ -130,7 +130,7 @@ export default function DashboardPage() {
                 <p className="text-xs text-gray-400">Threshold exceeded (37.5°C)</p>
               </div>
             </div>
-            <p className="text-2xl font-black text-gray-900 mt-4 mb-3">0°C</p>
+            <p className="text-2xl font-black text-gray-900 mt-4 mb-3">37°C</p>
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
               <div className="h-full rounded-full bg-gradient from-red-400 to-red-600" style={{ width: '72%' }} />
             </div>

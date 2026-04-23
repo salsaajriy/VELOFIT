@@ -7,7 +7,9 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Str;
+use Exception;
 
 class AuthController extends Controller
 {
@@ -74,4 +76,64 @@ class AuthController extends Controller
             'message' => 'Logout berhasil'
         ]);
     }
-}
+
+    // ════════════════════════════════════════════════════════════
+    //  METHOD: Google OAuth
+    // ════════════════════════════════════════════════════════════
+
+    public function redirectToGoogle() {
+        $url = Socialite::driver('google')
+            ->stateless()          // wajib untuk API tanpa session
+            ->redirect()
+            ->getTargetUrl();      // ambil URL saja, tidak langsung redirect
+ 
+        return response()->json([
+            'status'       => true,
+            'redirect_url' => $url,
+        ]);
+    }
+
+    public function handleGoogleCallback(Request $request) {
+        try {
+            $googleUser = Socialite::driver('google')
+                ->stateless()
+                ->user();
+ 
+            $user = User::where('google_id', $googleUser->getId())->first()
+                 ?? User::where('email', $googleUser->getEmail())->first();
+ 
+            if ($user) {
+                $user->update([
+                    'google_id' => $googleUser->getId(),
+                    'avatar'    => $googleUser->getAvatar(),
+                    'name'      => $user->name,
+                ]);
+            } else {
+                $user = User::create([
+                    'name'      => Str::limit(strip_tags($googleUser->getName()), 255),
+                    'email'     => filter_var($googleUser->getEmail(), FILTER_VALIDATE_EMAIL),
+                    'google_id' => $googleUser->getId(),
+                    'avatar'    => filter_var($googleUser->getAvatar(), FILTER_VALIDATE_URL)
+                                ? $googleUser->getAvatar() : null,
+                    'role'      => 'user',
+                    'password'  => null,
+                ]);
+
+            }
+ 
+            $user->tokens()->where('name', 'google_auth_token')->delete();
+ 
+            $token = $user->createToken('google_auth_token')->plainTextToken;
+ 
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            $redirectUrl = "{$frontendUrl}/auth/callback?token={$token}&role={$user->role}";
+ 
+            return redirect()->away($redirectUrl);
+ 
+        } catch (Exception $e) {
+            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+            return redirect()->away("{$frontendUrl}/auth/login?error=oauth_failed");
+        }
+    }
+ 
+} 

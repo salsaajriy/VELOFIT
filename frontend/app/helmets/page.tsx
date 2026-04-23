@@ -149,7 +149,7 @@ function PairModal({ onClose, onPair }: { onClose: () => void; onPair: (name: st
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="e.g. My Carbon Helmet"
+              placeholder=" Serial Code Helmet"
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
             />
           </div>
@@ -196,7 +196,7 @@ function PairModal({ onClose, onPair }: { onClose: () => void; onPair: (name: st
                 onClick={handleScan}
                 disabled={scanning}
                 className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-60"
-                style={{ background: 'linear-gradient(135deg, #3b82f6, #2563eb)' }}
+                style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
               >
                 {scanning ? 'Scanning...' : 'Scan for Devices'}
               </button>

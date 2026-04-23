@@ -16,10 +16,10 @@ const tempData = [
 type StatusSeverity = 'Critical' | 'Warning' | 'Normal';
 
 const eventLogs: { date: string; time: string; temp: string; tempColor: string; duration: string; status: StatusSeverity }[] = [
-  { date: 'Oct 26, 2025', time: '14:12 PM', temp: '36.7°C', tempColor: '#ef4444', duration: '12 min', status: 'Critical' },
+  { date: 'Oct 26, 2025', time: '14:12 PM', temp: '38.7°C', tempColor: '#ef4444', duration: '12 min', status: 'Critical' },
   { date: 'Oct 26, 2025', time: '08:55 AM', temp: '37.6°C', tempColor: '#f59e0b', duration: '4 min', status: 'Warning' },
-  { date: 'Oct 25, 2025', time: '09:30 AM', temp: '36.7°C', tempColor: '#ef4444', duration: '—', status: 'Normal' },
-  { date: 'Oct 25, 2025', time: '07:45 AM', temp: '36.5°C', tempColor: '#ef4444', duration: '—', status: 'Normal' },
+  { date: 'Oct 25, 2025', time: '09:30 AM', temp: '36.7°C', tempColor: '#22c55e', duration: '—', status: 'Normal' },
+  { date: 'Oct 25, 2025', time: '07:45 AM', temp: '36.5°C', tempColor: '#22c55e', duration: '—', status: 'Normal' },
 ];
 
 const statusConfig: Record<StatusSeverity, { bg: string; text: string; dot: string }> = {
