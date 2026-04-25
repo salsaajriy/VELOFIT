@@ -10,7 +10,8 @@ use App\Http\Controllers\API\UserController;
 //------------------------------------------------------------------
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login']);
+    Route::post('/login', [AuthController::class, 'login'])
+        ->middleware('throttle:5,1');;
 
     Route::get('/google', [AuthController::class, 'redirectToGoogle'])
         ->middleware('throttle:google-oauth');

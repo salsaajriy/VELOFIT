@@ -24,7 +24,7 @@ class AuthController extends Controller
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => Hash::make($request->password),
+            'password' => 'hashed',
             'role' => 'user',
         ]);
 
@@ -52,9 +52,9 @@ class AuthController extends Controller
                 'message' => 'Login gagal. Email dan Password salah.'], 401);
         }
 
-        $user = User::where('email', $request->email)->firstorFail();
+        $user = Auth::user();
         $token = $user->createToken('auth_token')->plainTextToken;
-        $dashboard = $user->isAdmin() ? '/admin/dashboard' : '/dashboard';
+        $dashboard = $user->role === 'admin' ? '/admin/dashboard' : '/dashboard';
 
         return response()->json([
             'status'       => true,
@@ -69,7 +69,9 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $request->user()->currentAccessToken()->delete();
+        if ($request->user()->currentAccessToken()) {
+            $request->user()->currentAccessToken()->delete();
+        }
 
         return response()->json([
             'status' => true,
@@ -82,11 +84,12 @@ class AuthController extends Controller
     // ════════════════════════════════════════════════════════════
 
     public function redirectToGoogle() {
+
         $url = Socialite::driver('google')
-            ->stateless()          // wajib untuk API tanpa session
+            ->stateless()
             ->redirect()
-            ->getTargetUrl();      // ambil URL saja, tidak langsung redirect
- 
+            ->getTargetUrl();
+
         return response()->json([
             'status'       => true,
             'redirect_url' => $url,
@@ -98,42 +101,45 @@ class AuthController extends Controller
             $googleUser = Socialite::driver('google')
                 ->stateless()
                 ->user();
- 
+
             $user = User::where('google_id', $googleUser->getId())->first()
-                 ?? User::where('email', $googleUser->getEmail())->first();
- 
-            if ($user) {
-                $user->update([
-                    'google_id' => $googleUser->getId(),
-                    'avatar'    => $googleUser->getAvatar(),
-                    'name'      => $user->name,
-                ]);
-            } else {
-                $user = User::create([
-                    'name'      => Str::limit(strip_tags($googleUser->getName()), 255),
-                    'email'     => filter_var($googleUser->getEmail(), FILTER_VALIDATE_EMAIL),
-                    'google_id' => $googleUser->getId(),
-                    'avatar'    => filter_var($googleUser->getAvatar(), FILTER_VALIDATE_URL)
-                                ? $googleUser->getAvatar() : null,
-                    'role'      => 'user',
-                    'password'  => null,
+                ?? User::where('email', $googleUser->getEmail())->first();
+    
+                if ($user) {
+                    $user->update([
+                        'google_id' => $googleUser->getId(),
+                        'avatar'    => $googleUser->getAvatar(),
+                    ]);
+                } else {
+                    $user = User::create([
+                        'name'      => Str::limit(strip_tags($googleUser->getName()), 255),
+                        'email'     => filter_var($googleUser->getEmail(), FILTER_VALIDATE_EMAIL),
+                        'google_id' => $googleUser->getId(),
+                        'avatar'    => filter_var($googleUser->getAvatar(), FILTER_VALIDATE_URL)
+                                    ? $googleUser->getAvatar() : null,
+                        'role'      => 'user',
+                        'password' => Hash::make(Str::random(16)),
+                    ]);
+
+                }
+    
+                $user->tokens()->where('name', 'google_auth_token')->delete();
+    
+                $token = $user->createToken('google_auth_token')->plainTextToken;
+    
+                $frontendUrl = rtrim(env('FRONTEND_URL', 'http://localhost:3000'), '/');
+    
+                $redirectUrl = "{$frontendUrl}/auth/callback?" . http_build_query([
+                    'token' => $token,
+                    'type' => 'google'
                 ]);
 
+                return redirect()->away($redirectUrl);
+    
+            } catch (Exception $e) {
+                $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
+                return redirect()->away("{$frontendUrl}/auth/login?error=oauth_failed");
             }
- 
-            $user->tokens()->where('name', 'google_auth_token')->delete();
- 
-            $token = $user->createToken('google_auth_token')->plainTextToken;
- 
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
-            $redirectUrl = "{$frontendUrl}/auth/callback?token={$token}&role={$user->role}";
- 
-            return redirect()->away($redirectUrl);
- 
-        } catch (Exception $e) {
-            $frontendUrl = env('FRONTEND_URL', 'http://localhost:3000');
-            return redirect()->away("{$frontendUrl}/auth/login?error=oauth_failed");
         }
-    }
- 
+    
 } 
