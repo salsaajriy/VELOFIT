@@ -4,6 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\API\AdminController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\UserController;
+use App\Http\Controllers\API\ProfileController;
 
 //------------------------------------------------------------------
 // PUBLIC ROUTES (tidak perlu token)
@@ -31,7 +32,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // User routes
     Route::prefix('user')->middleware('role.user')->group(function () {
         Route::get('/dashboard', [UserController::class, 'dashboard']);
-        Route::get('/profile', [UserController::class, 'profile']);
+        Route::get('/profile', [ProfileController::class, 'show']);
+        Route::post('/profile', [ProfileController::class, 'update']);
     });
 
     Route::prefix('admin')->middleware('role.admin')->group(function () {

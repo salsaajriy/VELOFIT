@@ -42,24 +42,42 @@ export default function Login() {
     setError("");
     setLoading(true);
 
+    console.log("LOGIN CLICKED");
+
     try {
-      const res = await fetch(`${BACKEND_URL}/api/login`, {
+      const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Accept": "application/json", // 🔥 WAJIB
         },
         body: JSON.stringify(form),
       });
 
-      const data = await res.json();
+      // 🔥 langsung coba ambil JSON
+      let data;
+      try {
+        data = await res.json();
+      } catch (err) {
+        // kalau gagal → berarti HTML
+        const text = await res.text();
+        console.error("NOT JSON RESPONSE:", text);
+        throw new Error("Server error (bukan JSON)");
+      }
+
+      console.log("RESPONSE JSON:", data);
 
       if (!res.ok) {
         throw new Error(data.message || "Login gagal");
       }
 
       localStorage.setItem("token", data.access_token);
+
+      console.log("LOGIN SUCCESS");
       router.push("/dashboard");
+
     } catch (err: unknown) {
+      console.error("LOGIN ERROR:", err);
       setError((err as Error).message || "Login gagal");
     } finally {
       setLoading(false);
@@ -71,10 +89,12 @@ export default function Login() {
       const res = await fetch(`${BACKEND_URL}/api/auth/google`);
       const data = await res.json();
 
+      console.log("GOOGLE LOGIN RESPONSE:", data);
+
       if (data.redirect_url) {
         window.location.href = data.redirect_url;
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('Google login error:', error);
     }
   }
