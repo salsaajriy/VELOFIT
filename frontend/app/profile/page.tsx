@@ -1,22 +1,84 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/sidebar';
 import Image from 'next/image';
 
 
 export default function ProfilePage() {
-  const fileInputRef = useRef(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [form, setForm] = useState({
-    displayName: 'Velofit',
-    weight: '50',
-    height: '170',
-    contact1: '+62 81234567',
-    contact2: '+62 81234567',
-    name1: 'Velofit',
-    name2: 'Velo fit',
+    displayName: '',
+    weight: '',
+    height: '',
+    contact1: '',
+    contact2: '',
+    name1: '',
+    name2: '',
   });
+
+  const router = useRouter();
+
+  const [isChecking, setIsChecking] = useState(true);
+
+  const BACKEND_URL = "http://127.0.0.1:8000";
+
+  const fetchProfile = async () => {
+    try {
+      const token = localStorage.getItem("token");
+
+      const res = await fetch(`${BACKEND_URL}/api/user/profile`, {
+        headers: {
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (res.status === 401) {
+        localStorage.removeItem("token");
+        router.push("/login");
+        return;
+      }
+
+      const data = await res.json();
+
+      console.log("PROFILE:", data);
+
+      setForm({
+        displayName: data.name || '',
+        weight: data.weight || '',
+        height: data.height || '',
+        contact1: data.contact1 || '',
+        contact2: data.contact2 || '',
+        name1: data.name1 || '',
+        name2: data.name2 || '',
+      });
+
+      if (data.avatar) {
+        setAvatar(data.avatar);
+      }
+
+    } catch (err) {
+      console.error("FETCH PROFILE ERROR:", err);
+    }
+  };
+
+  useEffect(() => {
+  const init = async () => {
+    const token = localStorage.getItem("token");
+    if (!token) {
+      router.push("/login");
+      return;
+    }
+
+    await fetchProfile();
+    setIsChecking(false);
+  };
+
+  init();
+}, []);
 
   const [avatar, setAvatar] = useState<string | null>(null); // null = placeholder
   const [saved, setSaved] = useState(false);
@@ -31,10 +93,44 @@ export default function ProfilePage() {
     setAvatar(url as string);
   };
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    try {
+      const token = localStorage.getItem("token");
+console.log("KIRIM:", form.weight);
+      const res = await fetch(`${BACKEND_URL}/api/user/profile`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          name: form.displayName,
+          weight: Number(form.weight),
+          height: Number(form.height),
+          contact1: form.contact1,
+          contact2: form.contact2,
+          name1: form.name1,
+          name2: form.name2,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.message || "Gagal update");
+      }
+
+      setSaved(true);
+      await fetchProfile();
+      setTimeout(() => setSaved(false), 2500);
+
+    } catch (err) {
+      console.error("SAVE ERROR:", err);
+    }
   };
+
+  if (isChecking) return null;
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -48,11 +144,15 @@ export default function ProfilePage() {
           <div className="flex items-center gap-5 mb-8">
             <div className="relative shrink-0">
               {/* Avatar circle */}
-              <div className="w-24 h-24 rounded-2xl overflow-hidden bg-gray-200">
+              <div className="relative w-24 h-24 rounded-2xl overflow-hidden bg-gray-200">
                 {avatar ? (
-                  <Image src={avatar} alt="Profile" className="w-full h-full object-cover" />
+                  <Image
+                    src={avatar}
+                    alt="Profile"
+                    fill
+                    className="object-cover"
+                  />
                 ) : (
-                  // Placeholder illustration
                   <div className="w-full h-full flex items-center justify-center bg-gradient from-gray-700 to-gray-900">
                     <svg viewBox="0 0 80 80" className="w-full h-full">
                       <rect width="80" height="80" fill="#1f2937" />
@@ -63,9 +163,8 @@ export default function ProfilePage() {
                 )}
               </div>
 
-              {/* Edit badge */}
               <button
-                
+                onClick={() => fileInputRef.current?.click()}
                 className="absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full flex items-center justify-center shadow-md transition-opacity hover:opacity-90"
                 style={{ background: 'linear-gradient(135deg, #f97316, #ef4444)' }}
                 aria-label="Change photo">
@@ -87,6 +186,7 @@ export default function ProfilePage() {
               <p className="text-xl font-black text-gray-900">Velofit</p>
               <button
                 className="text-sm font-semibold mt-1 transition-colors"
+                onClick={() => fileInputRef.current?.click()}
                 style={{ color: '#c2440a' }}>
                 Replace Photo
               </button>
@@ -95,7 +195,6 @@ export default function ProfilePage() {
 
           {/* ── Fields ────────────────────────────────── */}
           <div className="space-y-5">
-            {/* Display Name */}
             <Field label="Display Name">
               <input
                 type="text"
@@ -105,11 +204,11 @@ export default function ProfilePage() {
               />
             </Field>
 
-            {/* Weight */}
             <Field label="Current Weight (kg)">
               <div className="relative">
                 <input
                   type="number"
+                  step="0.01"
                   value={form.weight}
                   onChange={handleChange('weight')}
                   className={inputCls + ' pr-12'}
@@ -120,7 +219,6 @@ export default function ProfilePage() {
               </div>
             </Field>
 
-            {/* Height */}
             <Field label="Current Height (cm)">
               <div className="relative">
                 <input
@@ -135,7 +233,6 @@ export default function ProfilePage() {
               </div>
             </Field>
 
-            {/* Emergency Contact divider */}
             <div className="pt-2">
               <div className="flex items-center gap-3">
                 <p className="text-sm font-black text-gray-800 whitespace-nowrap">Emergency Contact</p>
