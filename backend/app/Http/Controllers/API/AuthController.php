@@ -18,13 +18,21 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required',
             'email' => 'required|email|unique:users',
-            'password' => 'required|min:8|confirmed'
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'confirmed',
+                'regex:/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).+$/',
+            ]
+        ],[
+            'password.regex' => 'Password harus mengandung huruf besar, huruf kecil, dan angka.'
         ]);
 
         $user = User::create([
             'name' => $request->name,
             'email' => $request->email,
-            'password' => 'hashed',
+            'password' => Hash::make($request->password),
             'role' => 'user',
         ]);
 

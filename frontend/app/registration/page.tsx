@@ -40,12 +40,12 @@ export default function SignupPage() {
     setFieldErrors({});
 
     if (!agreedToTerms) {
-      setError("Kamu harus menyetujui Terms.");
+      setError("You must agree to the Terms.");
       return;
     }
 
     if (form.password !== form.password_confirmation) {
-      setFieldErrors({ password_confirmation: "Password tidak cocok." });
+      setFieldErrors({ password_confirmation: "Passwords do not match." });
       return;
     }
 
@@ -74,17 +74,16 @@ export default function SignupPage() {
           data.message ||
           (data.errors
             ? Object.values(data.errors).flat().join(" ")
-            : "Registrasi gagal");
+            : "Registration failed");
 
         throw new Error(message);
       }
 
-      // optional
       localStorage.setItem("token", data.access_token);
 
       router.push("/login");
-    } catch (err: any) {
-      setError(err.message || "Registrasi gagal");
+    } catch (err: unknown) {
+      setError((err as Error).message || "Registration failed");
     } finally {
       setLoading(false);
     }
@@ -105,7 +104,9 @@ export default function SignupPage() {
     }
   };
 
-  // ── Render ─────────────────────────────────────────────────
+  const passwordValid =
+    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/.test(form.password);
+
   return (
     <div
       className="min-h-screen flex flex-col"
@@ -212,12 +213,27 @@ export default function SignupPage() {
                     name="password"
                     value={form.password}
                     onChange={handleChange}
-                    placeholder="••••••••"
+                    placeholder="Fill in your password"
                     required
                     minLength={8}
                     className={inputCls(fieldErrors.password)}
                   />
                   <FieldError msg={fieldErrors.password} />
+
+                  <ul className="text-xs mt-2 space-y-1">
+                    <li className={form.password.length >= 8 ? "text-green-500" : "text-gray-400"}>
+                      • At least 8 characters
+                    </li>
+                    <li className={/[A-Z]/.test(form.password) ? "text-green-500" : "text-gray-400"}>
+                      • Uppercase letter
+                    </li>
+                    <li className={/[a-z]/.test(form.password) ? "text-green-500" : "text-gray-400"}>
+                      • Lowercase letter
+                    </li>
+                    <li className={/\d/.test(form.password) ? "text-green-500" : "text-gray-400"}>
+                      • Number
+                    </li>
+                  </ul>
                 </div>
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -228,7 +244,7 @@ export default function SignupPage() {
                     name="password_confirmation"
                     value={form.password_confirmation}
                     onChange={handleChange}
-                    placeholder="••••••••"
+                    placeholder="Confirm your password"
                     required
                     className={inputCls(fieldErrors.password_confirmation)}
                   />
@@ -312,7 +328,7 @@ export default function SignupPage() {
 
       {/* Footer */}
       <footer className="border-t border-gray-200 bg-white/60 backdrop-blur-sm px-12 py-5">
-        <div className="max-w-screen-xl mx-auto flex items-center justify-between">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
           <span className="text-sm font-bold text-black">Velofit</span>
           {/* <span className="text-sm text-gray-400">Contact Us</span> */}
           <span className="text-sm text-gray-400">© 2026 Velofit. Precision &amp; Safety.</span>
@@ -323,14 +339,11 @@ export default function SignupPage() {
 }
 
 // ── Helper components & styles ─────────────────────────────────
-
-/** Tampilkan error di bawah input */
 function FieldError({ msg }: { msg: string }) {
   if (!msg) return null;
   return <p className="text-xs text-red-500 mt-1">{msg}</p>;
 }
 
-/** Class input — tambah border merah kalau ada error */
 function inputCls(hasError: string) {
   return (
     'w-full px-4 py-3 bg-gray-50 border rounded-xl text-gray-800 text-sm placeholder-gray-400 ' +

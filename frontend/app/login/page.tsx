@@ -141,18 +141,13 @@ export default function Login() {
           </div>
         </nav>
 
-        {/* ── Main ────────────────────────────────────────── */}
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 items-center gap-10 max-w-6xl w-full mx-auto py-14">
-
-          {/* Left — Hero ──────────────────────────────────── */}
+          {/* kiri */}
           <section className="flex flex-col items-center text-center lg:items-start lg:text-left">
-
-            {/* Badge + dots */}
             <div className="flex items-center gap-3 mb-5">
               <span
                 className="font-dm text-[0.68rem] font-bold tracking-widest text-white px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: "#b8961a", letterSpacing: "0.08em" }}
-              >
+                style={{ backgroundColor: "#b8961a", letterSpacing: "0.08em" }}>
                 V1.0 VERSION
               </span>
               <span className="flex gap-1.5 items-center">
@@ -162,16 +157,13 @@ export default function Login() {
               </span>
             </div>
 
-            {/* Headline */}
             <h1
               className="font-extrabold leading-[1.1] tracking-tight text-gray-900 mb-5"
-              style={{ fontSize: "clamp(2.3rem, 4vw, 3.1rem)" }}
-            >
+              style={{ fontSize: "clamp(2.3rem, 4vw, 3.1rem)" }}>
               Gear up for the<br />
               <span style={{ color: "#c45c0a" }}>next ride.</span>
             </h1>
 
-            {/* Accent bar */}
             <div
               className="rounded-full mb-5 hidden lg:block"
               style={{
@@ -189,16 +181,13 @@ export default function Login() {
               }}
             />
 
-            {/* Description */}
             <p
               className="font-dm leading-relaxed text-gray-600 max-w-sm mb-8"
-              style={{ fontSize: "0.95rem" }}
-            >
+              style={{ fontSize: "0.95rem" }}>
               Access your helmet&apos;s telemetry, safety logs, and
               heads-up display preferences in one secure cockpit.
             </p>
 
-            {/* Status chips */}
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
               <StatusChip icon="💀" label="Active Sync" />
               <StatusChip icon="🔋" label="Battery 98%" />
@@ -206,7 +195,6 @@ export default function Login() {
             </div>
           </section>
 
-          {/* Right — Login Card ───────────────────────────── */}
           <section className="flex justify-center">
             <div
               className="w-full bg-white rounded-2xl px-8 md:px-10 py-10 animate-fade-up"
@@ -222,7 +210,6 @@ export default function Login() {
                 Sign in to sync your velofit data.
               </p>
 
-              {/* Error */}
               {error && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-lg px-4 py-2.5 mb-5 font-dm">
                   {error}
@@ -230,8 +217,6 @@ export default function Login() {
               )}
 
               <form onSubmit={handleLogin} className="flex flex-col gap-5">
-
-                {/* Email */}
                 <div className="flex flex-col gap-1.5">
                   <label className="font-dm text-[0.85rem] font-semibold text-gray-900">
                     Email Address
@@ -240,7 +225,7 @@ export default function Login() {
                     <IconEmail />
                     <input
                       type="email"
-                      placeholder="velofit@gmail.com"
+                      placeholder="Enter your email"
                       value={form.email}
                       onChange={(e) => setForm({ ...form, email: e.target.value })}
                       required
@@ -262,7 +247,6 @@ export default function Login() {
                   </div>
                 </div>
 
-                {/* Password */}
                 <div className="flex flex-col gap-1.5">
                   <div className="flex items-center justify-between">
                     <label className="font-dm text-[0.85rem] font-semibold text-gray-900">
@@ -280,7 +264,7 @@ export default function Login() {
                     <IconLock />
                     <input
                       type="password"
-                      placeholder="••••••••"
+                      placeholder="Enter your password"
                       value={form.password}
                       onChange={(e) => setForm({ ...form, password: e.target.value })}
                       required
