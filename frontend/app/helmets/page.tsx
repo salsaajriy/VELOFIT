@@ -2,8 +2,32 @@
 
 // app/helmets/page.tsx
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/sidebar';
+
+// ── Config ─────────────────────────────────────────────────────────────────
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
+
+function getToken(): string {
+  if (typeof window === 'undefined') return '';
+  return localStorage.getItem('token') ?? '';
+}
+
+async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      Authorization: `Bearer ${getToken()}`,
+      ...(options.headers ?? {}),
+    },
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.message ?? `API error ${res.status}`);
+  return data as T;
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -16,123 +40,167 @@ interface Helmet {
   battery: number;
   connection: ConnectionStatus;
   isActive: boolean;
+  lastSeen: string | null;
+  batteryLow: boolean;
 }
 
-// ── Icons ──────────────────────────────────────────────────────────────────
-
-function HelmetIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 64 64" fill="none" className={className}>
-      <rect width="64" height="64" rx="12" fill="#f1f5f9" />
-      {/* Skull decorative icon */}
-      <circle cx="32" cy="28" r="11" stroke="#94a3b8" strokeWidth="2" />
-      <circle cx="27.5" cy="27" r="2.5" fill="#94a3b8" />
-      <circle cx="36.5" cy="27" r="2.5" fill="#94a3b8" />
-      <path d="M27 34h10M29 37h6" stroke="#94a3b8" strokeWidth="1.5" strokeLinecap="round" />
-      <path d="M21 30c0-6.075 4.925-11 11-11s11 4.925 11 11v5H21v-5z" fill="#e2e8f0" />
-    </svg>
-  );
+interface ApiResponse<T> {
+  data: T;
+  message?: string;
 }
 
-function BluetoothIcon({ connected }: { connected: boolean }) {
+// ── Toast ──────────────────────────────────────────────────────────────────
+
+type ToastType = 'success' | 'error';
+
+interface ToastState {
+  message: string;
+  type: ToastType;
+  id: number;
+}
+
+function Toast({ toast, onDone }: { toast: ToastState; onDone: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 3000);
+    return () => clearTimeout(t);
+  }, [onDone]);
+
   return (
-    <svg viewBox="0 0 24 24" fill="none" className="w-4 h-4">
-      <path
-        d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"
-        stroke={connected ? '#3b82f6' : '#94a3b8'}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      {!connected && (
-        <line x1="3" y1="3" x2="21" y2="21" stroke="#94a3b8" strokeWidth="2" strokeLinecap="round" />
+    <div
+      className={`fixed bottom-6 right-6 z-100 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold text-white transition-all animate-slide-up ${
+        toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
+      }`}
+    >
+      {toast.type === 'success' ? (
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-4 h-4 shrink-0">
+          <path d="m5 12 5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      ) : (
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-4 h-4 shrink-0">
+          <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
+        </svg>
       )}
-    </svg>
-  );
-}
-
-// ── Battery bar ────────────────────────────────────────────────────────────
-
-function BatteryBar({ level }: { level: number }) {
-  const color =
-    level >= 70 ? '#22c55e' : level >= 40 ? '#f59e0b' : '#ef4444';
-
-  return (
-    <div className="flex items-center gap-2">
-      {/* Battery icon */}
-      <svg viewBox="0 0 24 12" className="w-5 h-3" fill="none">
-        <rect x="0.5" y="0.5" width="20" height="11" rx="2.5" stroke={color} strokeWidth="1" />
-        <rect x="21" y="3.5" width="2.5" height="5" rx="1" fill={color} />
-        <rect
-          x="1.5"
-          y="1.5"
-          width={(level / 100) * 18}
-          height="9"
-          rx="1.5"
-          fill={color}
-        />
-      </svg>
-      <span className="text-base font-black" style={{ color }}>
-        {level}%
-      </span>
+      {toast.message}
     </div>
   );
 }
 
-// ── Toggle switch ──────────────────────────────────────────────────────────
+// ── Battery ────────────────────────────────────────────────────────────────
 
-function Toggle({
-  checked,
-  onChange,
-}: {
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
+function BatteryBar({ level }: { level: number }) {
+  const color = level >= 60 ? '#10b981' : level >= 30 ? '#f59e0b' : '#ef4444';
+  const segments = 4;
+
   return (
-    <button
-      role="switch"
-      aria-checked={checked}
-      onClick={() => onChange(!checked)}
-      className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none ${
-        checked ? 'bg-blue-500' : 'bg-gray-200'
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-0.5">
+        {Array.from({ length: segments }).map((_, i) => {
+          const threshold = ((i + 1) / segments) * 100;
+          const filled = level >= threshold - 100 / segments / 2;
+          return (
+            <div
+              key={i}
+              className="w-3 h-4 rounded-sm transition-colors"
+              style={{
+                backgroundColor: filled ? color : '#e5e7eb',
+                opacity: filled ? 1 : 0.5,
+              }}
+            />
+          );
+        })}
+        {/* cap */}
+        <div className="w-1 h-2 rounded-r-sm ml-0.5" style={{ backgroundColor: '#9ca3af' }} />
+      </div>
+      <span className="text-sm font-black tabular-nums" style={{ color }}>
+        {level}%
+      </span>
+      {level < 20 && (
+        <span className="text-[10px] font-bold text-red-500 bg-red-50 border border-red-200 px-1.5 py-0.5 rounded-full tracking-wide">
+          LOW
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ── Status Badge ───────────────────────────────────────────────────────────
+
+function StatusBadge({ status }: { status: ConnectionStatus }) {
+  const connected = status === 'connected';
+  return (
+    <span
+      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-black tracking-widest uppercase ${
+        connected
+          ? 'bg-emerald-50 text-emerald-600 border border-emerald-200'
+          : 'bg-gray-100 text-gray-400 border border-gray-200'
       }`}
     >
       <span
-        className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${
-          checked ? 'translate-x-5' : 'translate-x-0'
-        }`}
+        className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`}
       />
-    </button>
+      {connected ? 'Online' : 'Offline'}
+    </span>
+  );
+}
+
+function Spinner({ size = 'sm' }: { size?: 'sm' | 'md' }) {
+  const cls = size === 'sm' ? 'w-4 h-4' : 'w-6 h-6';
+  return (
+    <svg className={`${cls} animate-spin text-current`} viewBox="0 0 24 24" fill="none">
+      <circle className="opacity-20" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+      <path className="opacity-80" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z" />
+    </svg>
   );
 }
 
 // ── Pair Modal ─────────────────────────────────────────────────────────────
 
-function PairModal({ onClose, onPair }: { onClose: () => void; onPair: (name: string) => void }) {
+function PairModal({
+  onClose,
+  onPaired,
+  onToast,
+}: {
+  onClose: () => void;
+  onPaired: (helmet: Helmet) => void;
+  onToast: (msg: string, type: ToastType) => void;
+}) {
+  const [deviceId, setDeviceId] = useState('');
   const [name, setName] = useState('');
-  const [scanning, setScanning] = useState(false);
-  const [found, setFound] = useState(false);
+  const [loading, setLoading] = useState(false);
 
-  const handleScan = () => {
-    setScanning(true);
-    setTimeout(() => {
-      setScanning(false);
-      setFound(true);
-    }, 2000);
+  const handleSubmit = async () => {
+    if (!deviceId.trim() || !name.trim()) return;
+    setLoading(true);
+    try {
+      const res = await apiFetch<ApiResponse<Helmet>>('/helmets', {
+        method: 'POST',
+        body: JSON.stringify({ device_id: deviceId.trim(), name: name.trim() }),
+      });
+      onPaired(res.data);
+      onToast(`"${res.data.name}" successfully paired.`, 'success');
+      onClose();
+    } catch (err: unknown) {
+      onToast(err instanceof Error ? err.message : 'Failed to pair helmet.', 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
-      {/* Overlay */}
-      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={onClose} />
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white w-full sm:max-w-md sm:mx-4 sm:rounded-2xl rounded-t-3xl shadow-2xl z-10 p-6 pb-8 sm:pb-6">
+        {/* Handle bar (mobile) */}
+        <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 sm:hidden" />
 
-      {/* Modal */}
-      <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 z-10">
-        <div className="flex items-center justify-between mb-5">
-          <h2 className="text-lg font-black text-gray-900">Pair New Device</h2>
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h2 className="text-xl font-black text-gray-900">Pair New Helmet</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Register a new helmet device</p>
+          </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+            className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
           >
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
               <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
@@ -142,76 +210,48 @@ function PairModal({ onClose, onPair }: { onClose: () => void; onPair: (name: st
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-              Device Name
+            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">
+              Device ID
+            </label>
+            <input
+              type="text"
+              value={deviceId}
+              onChange={(e) => setDeviceId(e.target.value)}
+              placeholder="Enter ID"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+            />
+            <p className="text-[11px] text-gray-400 mt-1.5">
+              Check the ID on the sticker inside the helmet or in the device app.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">
+              Helmet Name
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder=" Serial Code Helmet"
+              placeholder="Enter Name"
+              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
             />
           </div>
 
-          {/* Scan area */}
-          <div
-            className={`rounded-xl border-2 border-dashed p-6 text-center transition-colors ${
-              found
-                ? 'border-green-300 bg-green-50'
-                : scanning
-                ? 'border-blue-300 bg-blue-50'
-                : 'border-gray-200 bg-gray-50'
-            }`}
-          >
-            {scanning ? (
-              <div className="flex flex-col items-center gap-2">
-                <svg className="animate-spin w-8 h-8 text-blue-500" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                </svg>
-                <p className="text-sm font-semibold text-blue-600">Scanning for devices...</p>
-              </div>
-            ) : found ? (
-              <div className="flex flex-col items-center gap-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" className="w-8 h-8">
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="m9 12 2 2 4-4" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <p className="text-sm font-semibold text-green-600">Device found! Ready to pair.</p>
-              </div>
-            ) : (
-              <div className="flex flex-col items-center gap-2">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" className="w-8 h-8">
-                  <path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                <p className="text-sm text-gray-400">Click scan to discover nearby helmets</p>
-              </div>
-            )}
-          </div>
-
-          <div className="flex gap-2">
-            {!found ? (
-              <button
-                onClick={handleScan}
-                disabled={scanning}
-                className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white transition-all disabled:opacity-60"
-                style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
-              >
-                {scanning ? 'Scanning...' : 'Scan for Devices'}
-              </button>
-            ) : (
-              <button
-                onClick={() => onPair(name || 'New Helmet')}
-                className="flex-1 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #22c55e, #16a34a)' }}
-              >
-                Pair Device
-              </button>
-            )}
+          <div className="flex gap-2 pt-1">
+            <button
+              onClick={handleSubmit}
+              disabled={loading || !deviceId.trim() || !name.trim()}
+              className="flex-1 py-3 rounded-xs font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
+            >
+              {loading ? <Spinner /> : null}
+              {loading ? 'Loading...' : 'Pair Now'}
+            </button>
             <button
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl font-bold text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
+              className="px-5 py-3 rounded-xs font-bold text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
             >
               Cancel
             </button>
@@ -222,337 +262,361 @@ function PairModal({ onClose, onPair }: { onClose: () => void; onPair: (name: st
   );
 }
 
+// ── Helmet Card ────────────────────────────────────────────────────────────
+
+function HelmetCard({
+  helmet,
+  onActivate,
+  onRename,
+  onDelete,
+}: {
+  helmet: Helmet;
+  onActivate: (id: string) => void;
+  onRename: (id: string, name: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [editingName, setEditingName] = useState(false);
+  const [editName, setEditName] = useState(helmet.name);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [loadingActivate, setLoadingActivate] = useState(false);
+  const [loadingDelete, setLoadingDelete] = useState(false);
+
+  const commitRename = () => {
+    if (editName.trim() && editName.trim() !== helmet.name) {
+      onRename(helmet.id, editName.trim());
+    }
+    setEditingName(false);
+  };
+
+  const handleActivate = async () => {
+    setLoadingActivate(true);
+    await onActivate(helmet.id);
+    setLoadingActivate(false);
+  };
+
+  const handleDelete = async () => {
+    setLoadingDelete(true);
+    await onDelete(helmet.id);
+    setLoadingDelete(false);
+  };
+
+  return (
+    <div
+      className={`group relative bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden ${
+        helmet.isActive
+          ? 'border-orange-300 shadow-md shadow-orange-100'
+          : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'
+      }`}
+    >
+      {/* Active indicator strip */}
+      {helmet.isActive && (
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-orange-400 to-red-400" />
+      )}
+
+      <div className="p-5">
+        <div className="flex items-start gap-4">
+          {/* Icon */}
+          <div
+            className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+              helmet.isActive ? 'bg-orange-50' : 'bg-gray-50'
+            }`}
+          >
+            <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6">
+              <path
+                d="M12 2C8.134 2 5 5.134 5 9v4h14V9c0-3.866-3.134-7-7-7z"
+                fill={helmet.isActive ? '#fb923c' : '#94a3b8'}
+              />
+              <rect x="4" y="13" width="16" height="3" rx="1.5" fill={helmet.isActive ? '#fed7aa' : '#e2e8f0'} />
+              <rect x="7" y="16" width="10" height="2.5" rx="1.25" fill={helmet.isActive ? '#fdba74' : '#cbd5e1'} />
+            </svg>
+          </div>
+
+          {/* Info */}
+          <div className="flex-1 min-w-0">
+            {/* Name */}
+            <div className="flex items-center gap-1.5 mb-0.5 pr-16">
+              {editingName ? (
+                <input
+                  autoFocus
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitRename();
+                    if (e.key === 'Escape') setEditingName(false);
+                  }}
+                  onBlur={commitRename}
+                  className="text-sm font-black text-gray-900 border-b-2 border-orange-400 bg-transparent focus:outline-none w-full max-w-50"
+                />
+              ) : (
+                <>
+                  <span className="text-sm font-black text-gray-900 truncate">{helmet.name}</span>
+                  <button
+                    onClick={() => { setEditName(helmet.name); setEditingName(true); }}
+                    className="text-gray-300 hover:text-gray-500 transition-colors shrink-0"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" />
+                      <path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+                    </svg>
+                  </button>
+                </>
+              )}
+            </div>
+
+            {/* Device ID */}
+            <p className="text-[11px] font-mono text-gray-400 mb-3 truncate">
+              {helmet.deviceId}
+            </p>
+
+            {/* Stats row */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <BatteryBar level={helmet.battery} />
+              <StatusBadge status={helmet.connection} />
+              {helmet.isActive && (
+                <span className="text-[10px] font-black text-orange-500 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full tracking-widest uppercase">
+                  Aktif
+                </span>
+              )}
+            </div>
+
+            {/* Last seen */}
+            {helmet.lastSeen && (
+              <p className="text-[10px] text-gray-300 mt-2">
+                Last seen:{' '}
+                {new Date(helmet.lastSeen).toLocaleString('id-ID', {
+                  day: 'numeric',
+                  month: 'short',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                })}
+              </p>
+            )}
+          </div>
+
+          {/* Action buttons — top right */}
+          <div className="absolute top-4 right-4 flex items-center gap-1.5">
+            {!helmet.isActive && (
+              <button
+                onClick={handleActivate}
+                disabled={loadingActivate}
+                title="Jadikan aktif"
+                className="h-7 px-2.5 flex items-center gap-1 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-[11px] font-bold hover:bg-orange-100 transition-colors disabled:opacity-50"
+              >
+                {loadingActivate ? <Spinner /> : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3">
+                    <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                )}
+                {!loadingActivate && <span>Activate</span>}
+              </button>
+            )}
+
+            {confirmDelete ? (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={handleDelete}
+                  disabled={loadingDelete}
+                  className="h-7 px-2.5 text-[11px] font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-1 disabled:opacity-50"
+                >
+                  {loadingDelete ? <Spinner /> : 'Hapus'}
+                </button>
+                <button
+                  onClick={() => setConfirmDelete(false)}
+                  className="h-7 px-2 text-[11px] font-bold text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Batal
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setConfirmDelete(true)}
+                title="Unpair helm"
+                className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
+                  <path d="M3 6h18M8 6V4h8v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" strokeLinecap="round" />
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────
 
-const initialHelmets: Helmet[] = [
-  // {
-  //   id: '1',
-  //   deviceId: 'SH-99210-XC',
-  //   name: 'Pro Rider - Carbon Elite',
-  //   battery: 92,
-  //   connection: 'connected',
-  //   isActive: true,
-  // },
-  {
-    id: '2',
-    deviceId: 'SH-77182-AP',
-    name: 'Adventure Pro',
-    battery: 58,
-    connection: 'offline',
-    isActive: false,
-  },
-];
-
-let nextId = 3;
-
 export default function ManageHelmetsPage() {
-  const [helmets, setHelmets] = useState<Helmet[]>(initialHelmets);
+  const [helmets, setHelmets] = useState<Helmet[]>([]);
+  const [loading, setLoading] = useState(true);
   const [showPairModal, setShowPairModal] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState('');
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
-  // ── Set Active ──────────────────────────────────────────────────────────
-  const handleSetActive = (id: string, value: boolean) => {
-    setHelmets((prev) =>
-      prev.map((h) =>
-        h.id === id ? { ...h, isActive: value } : { ...h, isActive: value ? false : h.isActive }
-      )
-    );
+  const showToast = (message: string, type: ToastType) =>
+    setToast({ message, type, id: Date.now() });
+
+  // ── Fetch ───────────────────────────────────────────────────────────────
+  const fetchHelmets = useCallback(async () => {
+    try {
+      const res = await apiFetch<ApiResponse<Helmet[]>>('/helmets');
+      setHelmets(res.data);
+    } catch {
+      // silent polling failure — don't spam toasts
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchHelmets();
+    const interval = setInterval(fetchHelmets, 5000);
+    return () => clearInterval(interval);
+  }, [fetchHelmets]);
+
+  // ── Activate ────────────────────────────────────────────────────────────
+  const handleActivate = async (id: string) => {
+    try {
+      await apiFetch(`/helmets/${id}/activate`, { method: 'PATCH' });
+      setHelmets((prev) =>
+        prev.map((h) => ({ ...h, isActive: h.id === id }))
+      );
+      showToast('Helm berhasil diaktifkan.', 'success');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal mengaktifkan helm.', 'error');
+    }
   };
 
   // ── Rename ──────────────────────────────────────────────────────────────
-  const startEdit = (h: Helmet) => {
-    setEditingId(h.id);
-    setEditName(h.name);
-  };
-
-  const commitEdit = (id: string) => {
-    if (editName.trim()) {
-      setHelmets((prev) =>
-        prev.map((h) => (h.id === id ? { ...h, name: editName.trim() } : h))
-      );
+  const handleRename = async (id: string, name: string) => {
+    try {
+      await apiFetch(`/helmets/${id}`, {
+        method: 'PUT',
+        body: JSON.stringify({ name }),
+      });
+      setHelmets((prev) => prev.map((h) => (h.id === id ? { ...h, name } : h)));
+      showToast('Nama helm diperbarui.', 'success');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal memperbarui nama.', 'error');
     }
-    setEditingId(null);
   };
 
   // ── Delete ──────────────────────────────────────────────────────────────
-  const handleDelete = (id: string) => {
-    setHelmets((prev) => prev.filter((h) => h.id !== id));
-    setDeleteConfirmId(null);
+  const handleDelete = async (id: string) => {
+    try {
+      await apiFetch(`/helmets/${id}`, { method: 'DELETE' });
+      setHelmets((prev) => prev.filter((h) => h.id !== id));
+      showToast('Helm berhasil di-unpair.', 'success');
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'Gagal menghapus helm.', 'error');
+    }
   };
 
-  // ── Pair New ────────────────────────────────────────────────────────────
-  const handlePair = (name: string) => {
-    const newHelmet: Helmet = {
-      id: String(nextId++),
-      deviceId: `SH-${Math.floor(10000 + Math.random() * 90000)}-NW`,
-      name,
-      battery: Math.floor(60 + Math.random() * 40),
-      connection: 'connected',
-      isActive: false,
-    };
-    setHelmets((prev) => [...prev, newHelmet]);
-    setShowPairModal(false);
-  };
-
+  const connectedCount = helmets.filter((h) => h.connection === 'connected').length;
   const activeHelmet = helmets.find((h) => h.isActive);
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-sans">
-      <Sidebar />
+    <>
+      <style>{`
+        @keyframes slide-up {
+          from { opacity: 0; transform: translateY(12px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        .animate-slide-up { animation: slide-up 0.25s ease-out forwards; }
+      `}</style>
 
-      <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 p-6 lg:p-8 overflow-y-auto">
-        {/* ── Header ──────────────────────────────────────────────────── */}
-        <div className="my-7">
-          <h1 className="text-2xl font-black text-gray-900">Manage Helmets</h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Configure, pair, and monitor your smart safety gear.
-          </p>
-        </div>
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar />
 
-        {/* ── Info + Quick Actions ─────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-7">
-          {/* Did you know */}
-          <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
-            <div className="flex items-center gap-2 mb-2">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" className="w-5 h-5 shrink-0">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 8v4M12 16h.01" strokeLinecap="round" />
-              </svg>
-              <span className="text-sm font-bold text-blue-600">Did you know?</span>
+        <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 p-5 lg:p-8 mx-auto">
+          {/* ── Header ─────────────────────────────────────────────────── */}
+          <div className="flex items-start justify-between mt-6 mb-6">
+            <div>
+              <h1 className="text-2xl font-black text-gray-900"> Manage Helm</h1>
+              <p className="text-sm text-gray-400 mt-0.5">
+                {loading
+                  ? 'Memuat data...'
+                  : `${helmets.length} perangkat terdaftar · ${connectedCount} online`}
+              </p>
             </div>
-            <p className="text-sm text-blue-700 leading-relaxed">
-              You can pair multiple helmets but only{' '}
-              <span className="font-black">one</span> can be active at a time for real-time safety
-              tracking and HUD data streaming.
-            </p>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm flex flex-col justify-between">
-            <p className="text-base font-black text-gray-900 mb-3">Quick Actions</p>
             <button
               onClick={() => setShowPairModal(true)}
-              className="w-full py-3 rounded-xl font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 hover:shadow-lg"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-xs font-bold text-sm text-white shadow-sm hover:opacity-90 hover:shadow-md transition-all"
               style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-4 h-4">
-                <circle cx="12" cy="12" r="9" />
-                <path d="M12 8v8M8 12h8" strokeLinecap="round" />
+                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
               </svg>
-              Pair New Device
+              Pair Helm
             </button>
-            <p className="text-xs text-gray-400 text-center mt-2">
-              Join thousands of riders in the IoT ecosystem.
-            </p>
           </div>
-        </div>
 
-        {/* ── Paired Devices ───────────────────────────────────────── */}
-        <h2 className="text-base font-black text-gray-800 mb-4">
-          Paired Devices ({helmets.length})
-        </h2>
-
-        <div className="space-y-4">
-          {helmets.map((helmet) => {
-            const isEditing = editingId === helmet.id;
-            const isConnected = helmet.connection === 'connected';
-
-            return (
-              <div
-                key={helmet.id}
-                className={`bg-white rounded-2xl border-2 shadow-sm transition-all relative overflow-hidden ${
-                  helmet.isActive ? 'border-blue-400' : 'border-gray-100'
-                }`}
-              >
-                {/* ACTIVE badge */}
-                {helmet.isActive && (
-                  <div className="absolute top-0 right-0">
-                    <span className="block bg-blue-500 text-white text-xs font-black px-3 py-1 rounded-bl-xl tracking-widest">
-                      ACTIVE
-                    </span>
-                  </div>
-                )}
-
-                <div className="p-5">
-                  <div className="flex items-start gap-4">
-                    {/* Helmet image */}
-                    <HelmetIcon className="w-16 h-16 shrink-0" />
-
-                    {/* Info */}
-                    <div className="flex-1 min-w-0">
-                      {/* Name row */}
-                      <div className="flex items-center gap-2 flex-wrap">
-                        {isEditing ? (
-                          <div className="flex items-center gap-2">
-                            <input
-                              autoFocus
-                              value={editName}
-                              onChange={(e) => setEditName(e.target.value)}
-                              onKeyDown={(e) => e.key === 'Enter' && commitEdit(helmet.id)}
-                              onBlur={() => commitEdit(helmet.id)}
-                              className="text-base font-bold text-gray-900 border-b-2 border-amber-400 bg-transparent focus:outline-none w-48"
-                            />
-                            <button
-                              onClick={() => commitEdit(helmet.id)}
-                              className="text-xs font-semibold text-green-600 hover:text-green-700"
-                            >
-                              Save
-                            </button>
-                          </div>
-                        ) : (
-                          <>
-                            <span className="text-base font-black text-gray-900">
-                              {helmet.name}
-                            </span>
-                            <button
-                              onClick={() => startEdit(helmet)}
-                              className="text-gray-400 hover:text-gray-600 transition-colors"
-                              aria-label="Edit name"
-                            >
-                              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
-                                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" strokeLinecap="round" />
-                                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
-                              </svg>
-                            </button>
-                          </>
-                        )}
-                      </div>
-
-                      <p className="text-xs text-gray-400 font-mono mt-0.5 mb-4">
-                        ID: {helmet.deviceId}
-                      </p>
-
-                      {/* Battery + Connection */}
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">
-                            Battery
-                          </p>
-                          <BatteryBar level={helmet.battery} />
-                        </div>
-                        <div>
-                          <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-1.5">
-                            Connection
-                          </p>
-                          <div className="flex items-center gap-1.5">
-                            <BluetoothIcon connected={isConnected} />
-                            <span
-                              className={`text-sm font-black tracking-wide ${
-                                isConnected ? 'text-blue-500' : 'text-gray-400'
-                              }`}
-                            >
-                              {isConnected ? 'CONNECTED' : 'OFFLINE'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Actions */}
-                    <div className="flex flex-col items-end gap-3 shrink-0">
-                      {/* Set Active toggle (only for non-active) */}
-                      {!helmet.isActive && (
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">
-                            Set Active
-                          </span>
-                          <Toggle
-                            checked={helmet.isActive}
-                            onChange={(v) => handleSetActive(helmet.id, v)}
-                          />
-                        </div>
-                      )}
-
-                      {/* Update + Delete */}
-                      <div className="flex items-center gap-2">
-                        {/* Firmware update */}
-                        <button
-                          className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-500 transition-colors"
-                          title="Update firmware"
-                        >
-                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" strokeLinecap="round" />
-                            <polyline points="17 8 12 3 7 8" />
-                            <line x1="12" y1="3" x2="12" y2="15" strokeLinecap="round" />
-                          </svg>
-                        </button>
-
-                        {/* Delete */}
-                        {deleteConfirmId === helmet.id ? (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleDelete(helmet.id)}
-                              className="px-2 py-1 text-xs font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors"
-                            >
-                              Confirm
-                            </button>
-                            <button
-                              onClick={() => setDeleteConfirmId(null)}
-                              className="px-2 py-1 text-xs font-bold text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteConfirmId(helmet.id)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors"
-                            title="Remove helmet"
-                          >
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                              <polyline points="3 6 5 6 21 6" />
-                              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" strokeLinecap="round" />
-                              <path d="M10 11v6M14 11v6" strokeLinecap="round" />
-                              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" strokeLinecap="round" />
-                            </svg>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Empty state */}
-          {helmets.length === 0 && (
-            <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-12 flex flex-col items-center text-center">
-              <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="1.5" className="w-12 h-12 mb-3">
-                <circle cx="12" cy="10" r="4" />
-                <path d="M5.5 20a8.38 8.38 0 0 1 .9-3.8 8 8 0 0 1 3-2.9A8.31 8.31 0 0 1 12 13" strokeLinecap="round" />
-                <path d="M19 17v5M17 19h4" strokeLinecap="round" />
-              </svg>
-              <p className="text-sm font-bold text-gray-400 mb-3">No helmets paired yet</p>
-              <button
-                onClick={() => setShowPairModal(true)}
-                className="px-5 py-2 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
-                style={{ background: 'linear-gradient(135deg, #e05a2b, #f0a500)' }}
-              >
-                Pair your first helmet
-              </button>
+          {/* ── Active helmet bar ───────────────────────────────────────── */}
+          {activeHelmet && (
+            <div className="mb-5 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
+              <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shrink-0" />
+              <p className="text-sm text-orange-700">
+                <span className="font-black">{activeHelmet.name}</span>
+                {' '}is currently active and sending real-time data.
+              </p>
+              <StatusBadge status={activeHelmet.connection} />
             </div>
           )}
-        </div>
 
-        {/* Active helmet summary bar */}
-        {activeHelmet && (
-          <div className="mt-6 bg-blue-50 border border-blue-100 rounded-2xl px-5 py-3 flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-            <p className="text-sm text-blue-700">
-              <span className="font-black">{activeHelmet.name}</span> is currently active and
-              streaming real-time data.
-            </p>
-          </div>
-        )}
-      </main>
+          {/* ── List ───────────────────────────────────────────────────── */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
+              <Spinner size="md" />
+              <span className="text-sm font-semibold">Memuat data helm...</span>
+            </div>
+          ) : helmets.length === 0 ? (
+            <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-14 flex flex-col items-center text-center">
+              <div className="w-14 h-14 rounded-2xl bg-gray-50 flex items-center justify-center mb-4">
+                <svg viewBox="0 0 24 24" fill="none" className="w-7 h-7">
+                  <path d="M12 2C8.134 2 5 5.134 5 9v4h14V9c0-3.866-3.134-7-7-7z" fill="#e2e8f0" />
+                  <rect x="4" y="13" width="16" height="3" rx="1.5" fill="#cbd5e1" />
+                  <rect x="7" y="16" width="10" height="2.5" rx="1.25" fill="#e2e8f0" />
+                </svg>
+              </div>
+              <p className="text-sm font-bold text-gray-500 mb-1">Belum ada helm terdaftar</p>
+              <p className="text-xs text-gray-400 mb-5">
+                Pair helm pertamamu untuk mulai monitoring.
+              </p>
+              <button
+                onClick={() => setShowPairModal(true)}
+                className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
+              >
+                Pair Helm Pertama
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {helmets.map((helmet) => (
+                <HelmetCard
+                  key={helmet.id}
+                  helmet={helmet}
+                  onActivate={handleActivate}
+                  onRename={handleRename}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          )}
+        </main>
+      </div>
 
-      {/* Pair Modal */}
+      {/* ── Modal ──────────────────────────────────────────────────────── */}
       {showPairModal && (
-        <PairModal onClose={() => setShowPairModal(false)} onPair={handlePair} />
+        <PairModal
+          onClose={() => setShowPairModal(false)}
+          onPaired={(h) => setHelmets((prev) => [...prev, h])}
+          onToast={showToast}
+        />
       )}
-    </div>
+
+      {/* ── Toast ──────────────────────────────────────────────────────── */}
+      {toast && <Toast key={toast.id} toast={toast} onDone={() => setToast(null)} />}
+    </>
   );
 }

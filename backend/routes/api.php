@@ -5,6 +5,7 @@ use App\Http\Controllers\API\AdminController;
 use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\UserController;
 use App\Http\Controllers\API\ProfileController;
+use App\Http\Controllers\API\HelmetController;
 
 //------------------------------------------------------------------
 // PUBLIC ROUTES (tidak perlu token)
@@ -22,14 +23,14 @@ Route::prefix('auth')->group(function () {
 
 });
 
-
+Route::post('/helmets/data', [HelmetController::class, 'receiveData']);
 
 
 //------------------------------------------------------------------
 // PROTECTED ROUTES (wajib pakai bearer token)
-//------------------------------------------------------------------
+//----------------------------------------------------------------
 Route::middleware('auth:sanctum')->group(function () {
-    // User routes
+    
     Route::prefix('user')->middleware('role.user')->group(function () {
         Route::get('/dashboard', [UserController::class, 'dashboard']);
         Route::get('/profile', [ProfileController::class, 'show']);
@@ -42,4 +43,13 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);
+
+    Route::prefix('helmets')->group(function () {
+        Route::get('/',                 [HelmetController::class, 'index']);
+        Route::post('/',                [HelmetController::class, 'store']);
+        Route::put('/{id}',             [HelmetController::class, 'update']);
+        Route::patch('/{id}/activate',  [HelmetController::class, 'activate']);
+        Route::delete('/{id}',          [HelmetController::class, 'destroy']);
+    });
+
 });
