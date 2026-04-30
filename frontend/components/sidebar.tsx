@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import {
   FiGrid,
@@ -121,7 +122,14 @@ function SidebarContent({
         <div className="flex items-center gap-2.5 px-4 py-4">
           <Link href="/profile" className="flex w-full items-center gap-2.5">
             {user?.avatar ? (
-              <img src={user.avatar}/>
+              <Image
+                src={user.avatar}
+                alt={`${user?.name ?? 'User'} avatar`}
+                width={32}
+                height={32}
+                className="h-8 w-8 rounded-full object-cover"
+                unoptimized
+              />
             ) : (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-200 text-sm font-bold text-amber-700">
                 {user?.name?.charAt(0) || 'A'}

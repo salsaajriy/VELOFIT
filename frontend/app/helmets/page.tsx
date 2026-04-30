@@ -374,7 +374,7 @@ function HelmetCard({
               <StatusBadge status={helmet.connection} />
               {helmet.isActive && (
                 <span className="text-[10px] font-black text-orange-500 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full tracking-widest uppercase">
-                  Aktif
+                  Active
                 </span>
               )}
             </div>
@@ -399,7 +399,7 @@ function HelmetCard({
               <button
                 onClick={handleActivate}
                 disabled={loadingActivate}
-                title="Jadikan aktif"
+                title="Make Active"
                 className="h-7 px-2.5 flex items-center gap-1 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-[11px] font-bold hover:bg-orange-100 transition-colors disabled:opacity-50"
               >
                 {loadingActivate ? <Spinner /> : (
@@ -418,19 +418,19 @@ function HelmetCard({
                   disabled={loadingDelete}
                   className="h-7 px-2.5 text-[11px] font-bold text-white bg-red-500 rounded-lg hover:bg-red-600 transition-colors flex items-center gap-1 disabled:opacity-50"
                 >
-                  {loadingDelete ? <Spinner /> : 'Hapus'}
+                  {loadingDelete ? <Spinner /> : 'Delete'}
                 </button>
                 <button
                   onClick={() => setConfirmDelete(false)}
                   className="h-7 px-2 text-[11px] font-bold text-gray-500 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                 >
-                  Batal
+                  Cancel
                 </button>
               </div>
             ) : (
               <button
                 onClick={() => setConfirmDelete(true)}
-                title="Unpair helm"
+                title="Unpair helmet"
                 className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
@@ -445,8 +445,6 @@ function HelmetCard({
   );
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
-
 export default function ManageHelmetsPage() {
   const [helmets, setHelmets] = useState<Helmet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -456,13 +454,11 @@ export default function ManageHelmetsPage() {
   const showToast = (message: string, type: ToastType) =>
     setToast({ message, type, id: Date.now() });
 
-  // ── Fetch ───────────────────────────────────────────────────────────────
   const fetchHelmets = useCallback(async () => {
     try {
       const res = await apiFetch<ApiResponse<Helmet[]>>('/helmets');
       setHelmets(res.data);
     } catch {
-      // silent polling failure — don't spam toasts
     } finally {
       setLoading(false);
     }
@@ -474,20 +470,18 @@ export default function ManageHelmetsPage() {
     return () => clearInterval(interval);
   }, [fetchHelmets]);
 
-  // ── Activate ────────────────────────────────────────────────────────────
   const handleActivate = async (id: string) => {
     try {
       await apiFetch(`/helmets/${id}/activate`, { method: 'PATCH' });
       setHelmets((prev) =>
         prev.map((h) => ({ ...h, isActive: h.id === id }))
       );
-      showToast('Helm berhasil diaktifkan.', 'success');
+      showToast('Helmet activated.', 'success');
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : 'Gagal mengaktifkan helm.', 'error');
+      showToast(err instanceof Error ? err.message : 'Failed to activate helmet.', 'error');
     }
   };
 
-  // ── Rename ──────────────────────────────────────────────────────────────
   const handleRename = async (id: string, name: string) => {
     try {
       await apiFetch(`/helmets/${id}`, {
@@ -495,20 +489,19 @@ export default function ManageHelmetsPage() {
         body: JSON.stringify({ name }),
       });
       setHelmets((prev) => prev.map((h) => (h.id === id ? { ...h, name } : h)));
-      showToast('Nama helm diperbarui.', 'success');
+      showToast('Helmet name updated.', 'success');
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : 'Gagal memperbarui nama.', 'error');
+      showToast(err instanceof Error ? err.message : 'Failed to update helmet name.', 'error');
     }
   };
 
-  // ── Delete ──────────────────────────────────────────────────────────────
   const handleDelete = async (id: string) => {
     try {
       await apiFetch(`/helmets/${id}`, { method: 'DELETE' });
       setHelmets((prev) => prev.filter((h) => h.id !== id));
-      showToast('Helm berhasil di-unpair.', 'success');
+      showToast('Helmet unpaired successfully.', 'success');
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : 'Gagal menghapus helm.', 'error');
+      showToast(err instanceof Error ? err.message : 'Failed to unpair helmet.', 'error');
     }
   };
 
@@ -532,11 +525,11 @@ export default function ManageHelmetsPage() {
           {/* ── Header ─────────────────────────────────────────────────── */}
           <div className="flex items-start justify-between mt-6 mb-6">
             <div>
-              <h1 className="text-2xl font-black text-gray-900"> Manage Helm</h1>
+              <h1 className="text-2xl font-black text-gray-900"> Manage Helm </h1>
               <p className="text-sm text-gray-400 mt-0.5">
                 {loading
-                  ? 'Memuat data...'
-                  : `${helmets.length} perangkat terdaftar · ${connectedCount} online`}
+                  ? 'Loading Helmet Data...'
+                  : `${helmets.length} Registered Devices · ${connectedCount} Online`}
               </p>
             </div>
             <button
@@ -567,7 +560,7 @@ export default function ManageHelmetsPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
               <Spinner size="md" />
-              <span className="text-sm font-semibold">Memuat data helm...</span>
+              <span className="text-sm font-semibold">Loading Helmet Data...</span>
             </div>
           ) : helmets.length === 0 ? (
             <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-14 flex flex-col items-center text-center">
@@ -578,16 +571,16 @@ export default function ManageHelmetsPage() {
                   <rect x="7" y="16" width="10" height="2.5" rx="1.25" fill="#e2e8f0" />
                 </svg>
               </div>
-              <p className="text-sm font-bold text-gray-500 mb-1">Belum ada helm terdaftar</p>
+              <p className="text-sm font-bold text-gray-500 mb-1">No Helmets Registered</p>
               <p className="text-xs text-gray-400 mb-5">
-                Pair helm pertamamu untuk mulai monitoring.
+                Start by pairing your helmet to see battery level, and connection status right here.
               </p>
               <button
                 onClick={() => setShowPairModal(true)}
-                className="px-5 py-2.5 rounded-xl text-sm font-bold text-white transition-all hover:opacity-90"
+                className="px-5 py-2.5 rounded-xs text-sm font-bold text-white transition-all hover:opacity-90"
                 style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
               >
-                Pair Helm Pertama
+                Pair your first helmet
               </button>
             </div>
           ) : (
@@ -606,7 +599,6 @@ export default function ManageHelmetsPage() {
         </main>
       </div>
 
-      {/* ── Modal ──────────────────────────────────────────────────────── */}
       {showPairModal && (
         <PairModal
           onClose={() => setShowPairModal(false)}
@@ -615,7 +607,6 @@ export default function ManageHelmetsPage() {
         />
       )}
 
-      {/* ── Toast ──────────────────────────────────────────────────────── */}
       {toast && <Toast key={toast.id} toast={toast} onDone={() => setToast(null)} />}
     </>
   );

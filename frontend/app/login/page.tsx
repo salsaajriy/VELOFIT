@@ -3,8 +3,12 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { MdEmail, MdLock } from "react-icons/md";
+import { FaSync } from "react-icons/fa";
 import { FcGoogle } from "react-icons/fc";
+import { FaBatteryFull } from "react-icons/fa6";
+import { MdEmail, MdLock } from "react-icons/md";
+import { AiTwotoneSafetyCertificate } from "react-icons/ai";
+import Footer from "@/components/footer";
 
 
 function IconEmail() {
@@ -19,7 +23,7 @@ function IconLock() {
   );
 }
 
-function StatusChip({ icon, label }: { icon: string; label: string }) {
+function StatusChip({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="flex items-center gap-2 bg-white border border-[#e0ddd8] rounded-xl px-4 py-2.5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
       <span className="text-base leading-none">{icon}</span>
@@ -116,8 +120,11 @@ export default function Login() {
 
         {/* ── Navbar ──────────────────────────────────────── */}
         <nav
-          className="sticky top-0 z-50 flex items-center justify-between h-16 px-8 md:px-12 bg-white"
-          style={{ borderBottom: "1px solid #e8e4de" }}
+          className="sticky top-0 z-50 flex items-center justify-between h-16 px-8 md:px-12"
+          style={{ 
+            borderBottom: "1px solid #e8e4de",
+            backgroundColor: "#f0ede8",
+           }}
         >
           <span className="font-syne text-xl font-bold tracking-tight text-gray-900">
             Velofit
@@ -189,9 +196,9 @@ export default function Login() {
             </p>
 
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
-              <StatusChip icon="💀" label="Active Sync" />
-              <StatusChip icon="🔋" label="Battery 98%" />
-              <StatusChip icon="🛡️" label="System OK" />
+              <StatusChip icon={<FaSync />} label="Active Sync" />
+              <StatusChip icon={<FaBatteryFull />} label="Battery 98%" />
+              <StatusChip icon={<AiTwotoneSafetyCertificate />} label="System OK" />
             </div>
           </section>
 
@@ -362,30 +369,9 @@ export default function Login() {
             </div>
           </section>
         </main>
-
-        {/* ── Footer ──────────────────────────────────────── */}
-        <footer
-          className="flex items-center justify-between px-8 md:px-12 py-4 flex-wrap gap-2"
-          style={{
-            borderTop: "1px solid #e0ddd8",
-            backgroundColor: "#f0ede8",
-          }}
-        >
-          <span className="font-syne text-sm font-semibold" style={{ color: "#7a7a7a" }}>
-            Velofit
-          </span>
-          {/* <Link
-            href="/contact"
-            className="font-dm text-[0.85rem] transition-colors hover:text-gray-900"
-            style={{ color: "#7a7a7a" }}
-          >
-            Contact Us
-          </Link> */}
-          <span className="font-dm text-[0.82rem]" style={{ color: "#9a9a9a" }}>
-            © 2026 Velofit. Precision &amp; Safety.
-          </span>
-        </footer>
+        <Footer />
       </div>
+     
     </>
   );
 }

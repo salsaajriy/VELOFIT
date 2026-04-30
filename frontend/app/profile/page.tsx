@@ -183,7 +183,7 @@ console.log("KIRIM:", form.weight);
             </div>
 
             <div>
-              <p className="text-xl font-black text-gray-900">Velofit</p>
+              <p className="text-xl font-black text-gray-900">{form.displayName}</p>
               <button
                 className="text-sm font-semibold mt-1 transition-colors"
                 onClick={() => fileInputRef.current?.click()}

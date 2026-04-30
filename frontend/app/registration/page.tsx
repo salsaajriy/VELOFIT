@@ -3,6 +3,9 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Footer from '@/components/footer';
+import { FaRegHeart } from "react-icons/fa";
+import { AiTwotoneSafetyCertificate } from "react-icons/ai";
 
 export default function SignupPage() {
   const router = useRouter();
@@ -110,8 +113,7 @@ export default function SignupPage() {
   return (
     <div
       className="min-h-screen flex flex-col"
-      style={{ background: 'linear-gradient(135deg, #f5f5f0 0%, #eef2ec 50%, #f0f5f0 100%)' }}
-    >
+      style={{ backgroundColor: "#f0ede8" }}>
       {/* Main Content */}
       <div className="flex flex-1">
         {/* Left Side — Branding */}
@@ -129,11 +131,11 @@ export default function SignupPage() {
             </p>
             <div className="flex gap-3 flex-wrap">
               <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-full shadow-sm">
-                <span className="text-lg">🛡️</span>
+                <span className="text-lg"><AiTwotoneSafetyCertificate /></span>
                 <span className="text-sm font-semibold text-gray-700">Real-time Telemetry</span>
               </div>
               <div className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-full shadow-sm">
-                <span className="text-lg">❤️</span>
+                <span className="text-lg"><FaRegHeart /></span>
                 <span className="text-sm font-semibold text-gray-700">Vitals Tracking</span>
               </div>
             </div>
@@ -325,20 +327,11 @@ export default function SignupPage() {
           </div>
         </div>
       </div>
-
-      {/* Footer */}
-      <footer className="border-t border-gray-200 bg-white/60 backdrop-blur-sm px-12 py-5">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <span className="text-sm font-bold text-black">Velofit</span>
-          {/* <span className="text-sm text-gray-400">Contact Us</span> */}
-          <span className="text-sm text-gray-400">© 2026 Velofit. Precision &amp; Safety.</span>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }
 
-// ── Helper components & styles ─────────────────────────────────
 function FieldError({ msg }: { msg: string }) {
   if (!msg) return null;
   return <p className="text-xs text-red-500 mt-1">{msg}</p>;
