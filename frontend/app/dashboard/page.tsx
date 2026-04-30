@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/sidebar';
 
 const rideHistory = [
@@ -10,9 +11,12 @@ const rideHistory = [
   { date: 'Oct 20, 2025', time: '08:00 AM', route: 'Mountain Trail A', distance: '5.4 km', duration: '22m', status: 'Incompleted' },
 ];
 
+
+
 export default function DashboardPage() {
   const [rideActive, setRideActive] = useState(false);
-
+  const router = useRouter();
+  
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
@@ -40,7 +44,7 @@ export default function DashboardPage() {
             </h2>
             <div className="flex gap-3">
               <button
-                onClick={() => setRideActive(true)}
+                onClick={() => router.push('/ride')}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90 hover:shadow-lg"
                 style={{ background: 'linear-gradient(135deg, #f97316, #ef4444)' }}
               >
@@ -48,15 +52,6 @@ export default function DashboardPage() {
                   <polygon points="5,3 19,12 5,21" />
                 </svg>
                 Start Ride
-              </button>
-              <button
-                onClick={() => setRideActive(false)}
-                className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm border-2 border-gray-300 text-gray-700 bg-white hover:bg-gray-50 transition-all"
-              >
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                  <rect x="3" y="3" width="18" height="18" rx="2" />
-                </svg>
-                End Ride
               </button>
             </div>
           </div>
