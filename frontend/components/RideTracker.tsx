@@ -90,7 +90,7 @@ export default function RideTracker({ onRideSaved }: RideTrackerProps) {
           type="text"
           value={rideName}
           onChange={(e) => setRideName(e.target.value)}
-          placeholder="e.g. Morning Ride"
+          placeholder="Enter a name for your ride"
           className="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm text-gray-700 placeholder-gray-400 focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all"
         />
 

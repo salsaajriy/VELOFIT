@@ -50,9 +50,9 @@ export interface HistoryResponse {
  * POST /api/ride/start
  * Create a new active ride session.
  */
-export async function apiStartRide(name?: string): Promise<StartRideResponse> {
-  const { data } = await axios.post<StartRideResponse>('/ride/start', { name });
-  return data;
+export async function apiStartRide(name?: string) {
+  const response = await axios.post('/rides/start', { name });
+  return response.data;
 }
 
 /**

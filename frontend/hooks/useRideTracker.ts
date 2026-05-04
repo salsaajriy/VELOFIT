@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { apiStartRide, apiFinishRide } from '@/lib/api/rides';
-import type { Ride, RoutePoint } from '@/lib/api/rides';
+import { apiStartRide, apiFinishRide, Ride, RoutePoint } from '@/lib/api/rides';
+import { getUserProfile } from '@/lib/api/profile';
 
 // ── Types ─────────────────────────────────────────────────────────────────
 
@@ -79,6 +79,7 @@ export function useRideTracker() {
   const routeRef     = useRef<RoutePoint[]>([]);
   const elapsedRef   = useRef<number>(0);
   const distanceRef  = useRef<number>(0);
+  const weightRef    = useRef<number>(70); // ref so GPS callback always reads latest weight
 
   // ── Timer ──────────────────────────────────────────────────────────────
 
@@ -131,7 +132,7 @@ export function useRideTracker() {
             distanceRef.current > 0
               ? (distanceRef.current / (elapsedRef.current / 3600))
               : 0,
-            state.weight
+            weightRef.current
           ),
         }));
       },
@@ -255,11 +256,9 @@ export function useRideTracker() {
     async function fetchuser() {
         try {
             const user = await getUserProfile();
-
-            setState((s) => ({
-                ...s,
-                weight: user.weight ?? 70
-            }));
+            const w = user.weight ?? 70;
+            weightRef.current = w;
+            setState((s) => ({ ...s, weight: w }));
         } catch (err) {
             console.error("Failed to fetch user profile for weight:", err);
         }

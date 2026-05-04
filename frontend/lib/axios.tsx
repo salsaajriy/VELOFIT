@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api',
+  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL ?? 'http://localhost:8000/api',
   withCredentials: true,               // required for Sanctum cookie auth
   headers: {
     Accept: 'application/json',
@@ -14,7 +14,7 @@ instance.interceptors.request.use((config) => {
   // If you use token-based auth (not cookie), read from localStorage.
   // For SPA with cookie auth, withCredentials above is enough.
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('auth_token');
+    const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }

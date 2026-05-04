@@ -7,13 +7,11 @@ use Illuminate\Http\Request;
 
 class ProfileController extends Controller
 {
-    // 🔹 GET profile user login
     public function show(Request $request)
     {
         return response()->json($request->user());
     }
 
-    // 🔹 UPDATE profile
     public function update(Request $request)
     {
         $user = $request->user();
