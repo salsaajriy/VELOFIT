@@ -10,16 +10,32 @@ return new class extends Migration
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+
             $table->string('name', 100)->nullable();
             $table->string('email', 150)->unique();
             $table->timestamp('email_verified_at')->nullable();
+
             $table->text('password')->nullable();
+
             $table->string('google_id')->nullable();
             $table->text('avatar')->nullable();
-            $table->float('weight')->nullable();
-            $table->enum('role', ['user', 'admin'])->default('user');
+
+            // body profile
+            $table->decimal('weight', 5, 2)->nullable();
+            $table->decimal('height', 5, 2)->nullable();
+
+            // emergency contact
+            $table->string('contact1')->nullable();
+            $table->string('contact2')->nullable();
+
+            $table->string('name1')->nullable();
+            $table->string('name2')->nullable();
+
+            $table->enum('role', ['user', 'admin'])
+                ->default('user');
+
             $table->rememberToken();
-            $table->timestamps(); 
+            $table->timestamps();
         });
     }
 
