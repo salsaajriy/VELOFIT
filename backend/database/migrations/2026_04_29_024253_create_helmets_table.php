@@ -12,12 +12,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('device_id')->unique();
-            $table->string('name');
+            $table->string('device_name');
             $table->unsignedTinyInteger('battery')->default(0);
-            $table->enum('connection', ['connected', 'offline'])->default('offline');
             $table->boolean('is_active')->default(false);
-            $table->timestamp('last_seen')->nullable();
+            $table->timestamp('last_ping')->nullable();
             $table->timestamps();
+
+            $table->index(['user_id', 'is_active']);
         });
     }
 

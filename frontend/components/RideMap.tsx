@@ -1,174 +1,168 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
+import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
+import type { Coordinate } from '@/types/ride';
 
-// Fix default marker icons broken by webpack
-delete (L.Icon.Default.prototype as unknown as Record<string, unknown>)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+// ── Custom Icons ──────────────────────────────────────────────
+const startIcon = new L.Icon({
+  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
+      <circle cx="12" cy="12" r="10" fill="#22c55e" stroke="white" stroke-width="2"/>
+      <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">S</text>
+    </svg>
+  `),
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
 });
 
-// ── Custom marker icons ────────────────────────────────────────────────────
-
-const startIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width:14px;height:14px;
-    border-radius:50%;
-    background:#22c55e;
-    border:2.5px solid white;
-    box-shadow:0 0 0 2px #22c55e44;
-  "></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
+const endIcon = new L.Icon({
+  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
+      <circle cx="12" cy="12" r="10" fill="#ef4444" stroke="white" stroke-width="2"/>
+      <text x="12" y="16" text-anchor="middle" fill="white" font-size="10" font-weight="bold">F</text>
+    </svg>
+  `),
+  iconSize: [32, 32],
+  iconAnchor: [16, 16],
 });
 
-const endIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width:14px;height:14px;
-    border-radius:50%;
-    background:#ef4444;
-    border:2.5px solid white;
-    box-shadow:0 0 0 2px #ef444444;
-  "></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
+const liveIcon = new L.Icon({
+  iconUrl: 'data:image/svg+xml;base64,' + btoa(`
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28">
+      <circle cx="12" cy="12" r="8" fill="#3b82f6" stroke="white" stroke-width="3"/>
+    </svg>
+  `),
+  iconSize: [28, 28],
+  iconAnchor: [14, 14],
 });
 
-// ── Live tracking dot ──────────────────────────────────────────────────────
+// ── Sub-komponen: Auto-pan ke posisi terkini ──────────────────
+function MapAutoCenter({ position }: { position: [number, number] | null }) {
+  const map = useMap();
+  const prevPos = useRef<[number, number] | null>(null);
 
-const liveIcon = L.divIcon({
-  className: '',
-  html: `<div style="
-    width:12px;height:12px;
-    border-radius:50%;
-    background:#f59e0b;
-    border:2px solid white;
-    box-shadow:0 0 0 4px #f59e0b33;
-    animation:pulse 1.5s infinite;
-  "></div>
-  <style>@keyframes pulse{0%,100%{box-shadow:0 0 0 4px #f59e0b33}50%{box-shadow:0 0 0 8px #f59e0b11}}</style>`,
-  iconSize: [12, 12],
-  iconAnchor: [6, 6],
-});
+  useEffect(() => {
+    if (!position) return;
+    const [lat, lng] = position;
+    if (prevPos.current) {
+      const [pLat, pLng] = prevPos.current;
+      if (Math.abs(lat - pLat) < 0.00001 && Math.abs(lng - pLng) < 0.00001) return;
+    }
+    map.panTo([lat, lng], { animate: true, duration: 0.5 });
+    prevPos.current = position;
+  }, [position, map]);
 
-// ── Props ──────────────────────────────────────────────────────────────────
-
-interface RideMapProps {
-  /** Array of [lat, lng] tuples */
-  coords: [number, number][];
-  /** Whether this is a live tracking map (shows live dot at last point) */
-  live?: boolean;
-  /** Tailwind / CSS class for the container div */
-  className?: string;
+  return null;
 }
 
-// ── Component ──────────────────────────────────────────────────────────────
+// ── Sub-komponen: FitBounds untuk history ────────────────────
+function MapFitBounds({ trail }: { trail: Array<[number, number]> }) {
+  const map = useMap();
+  const fitted = useRef(false);
 
-export default function RideMap({ coords, live = false, className = 'h-44' }: RideMapProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef       = useRef<L.Map | null>(null);
-  const polylineRef  = useRef<L.Polyline | null>(null);
-  const startMarker  = useRef<L.Marker | null>(null);
-  const endMarker    = useRef<L.Marker | null>(null);
-  const liveMarker   = useRef<L.Marker | null>(null);
-
-  // ── Initialise map once ──────────────────────────────────────────────────
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    if (!trail || !trail.length || fitted.current) return;
+    const bounds = L.latLngBounds(trail.map(([lat, lng]) => [lat, lng]));
+    map.fitBounds(bounds, { padding: [40, 40] });
+    fitted.current = true;
+  }, [trail, map]);
 
-    const map = L.map(containerRef.current, {
-      zoomControl: true,
-      scrollWheelZoom: false,
-      attributionControl: false,
-    });
+  return null;
+}
 
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-    }).addTo(map);
+// ── Props Interface ───────────────────────────────────────────
+interface RideMapProps {
+  trail?:         Array<[number, number]>;  // Make optional with default
+  currentPos?:    { lat: number; lng: number } | null;
+  routeCoords?:   Array<[number, number]>;
+  coords?:        Array<[number, number]>;  // Alternative prop name
+  mode:           'tracking' | 'history' | 'route' | 'preview';
+  center?:        [number, number];
+  height?:        string;
+  className?:     string;
+}
 
-    mapRef.current = map;
+// ── Main Component (memoized) ─────────────────────────────────
+const RideMap = memo(function RideMap({
+  trail = [],           // Default to empty array
+  currentPos,
+  routeCoords,
+  coords,              // Support alternative prop name
+  mode,
+  center = [1.1301, 104.0529], // Batam default
+  height = '400px',
+  className = '',
+}: RideMapProps) {
+  // Use coords if trail is empty and coords is provided
+  const effectiveTrail = trail && trail.length > 0 ? trail : (coords || []);
+  
+  const livePos: [number, number] | null = currentPos
+    ? [currentPos.lat, currentPos.lng]
+    : null;
 
-    return () => {
-      map.remove();
-      mapRef.current = null;
-    };
-  }, []);
+  // Safe access with checks
+  const startPoint = effectiveTrail && effectiveTrail.length > 0 ? effectiveTrail[0] : null;
+  const endPoint = effectiveTrail && effectiveTrail.length > 1 ? effectiveTrail[effectiveTrail.length - 1] : null;
 
-  // ── Sync coords whenever they change ─────────────────────────────────────
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-
-    if (!coords || coords.length === 0) {
-      // Show a default world view if no coords yet
-      map.setView([0, 0], 2);
-      return;
-    }
-
-    // ── Draw / update polyline ─────────────────────────────────────────────
-    if (polylineRef.current) {
-      polylineRef.current.setLatLngs(coords);
-    } else {
-      polylineRef.current = L.polyline(coords, {
-        color: '#f59e0b',
-        weight: 4,
-        opacity: 0.9,
-        lineJoin: 'round',
-      }).addTo(map);
-    }
-
-    // ── Start marker ───────────────────────────────────────────────────────
-    if (!startMarker.current) {
-      startMarker.current = L.marker(coords[0], { icon: startIcon }).addTo(map);
-    } else {
-      startMarker.current.setLatLng(coords[0]);
-    }
-
-    // ── End / live marker ──────────────────────────────────────────────────
-    const last = coords[coords.length - 1];
-
-    if (live) {
-      // Remove static end marker if it exists
-      endMarker.current?.remove();
-      endMarker.current = null;
-
-      if (!liveMarker.current) {
-        liveMarker.current = L.marker(last, { icon: liveIcon }).addTo(map);
-      } else {
-        liveMarker.current.setLatLng(last);
-      }
-    } else {
-      liveMarker.current?.remove();
-      liveMarker.current = null;
-
-      if (coords.length > 1) {
-        if (!endMarker.current) {
-          endMarker.current = L.marker(last, { icon: endIcon }).addTo(map);
-        } else {
-          endMarker.current.setLatLng(last);
-        }
-      }
-    }
-
-    // ── Fit bounds ─────────────────────────────────────────────────────────
-    if (coords.length === 1) {
-      map.setView(coords[0], 15);
-    } else {
-      map.fitBounds(L.latLngBounds(coords), { padding: [24, 24], maxZoom: 17 });
-    }
-  }, [coords, live]);
+  // Determine if we should show start/end markers
+  const showStartMarker = mode !== 'tracking' && startPoint;
+  const showEndMarker = mode === 'history' && endPoint;
+  const showLiveMarker = mode === 'tracking' && livePos;
 
   return (
-    <div
-      ref={containerRef}
+    <MapContainer
+      center={livePos ?? center}
+      zoom={16}
+      style={{ height, width: '100%', borderRadius: '12px' }}
+      attributionControl={false}
       className={className}
-      style={{ background: '#e5e7eb' }}
-    />
+    >
+      {/* Base tile layer */}
+      <TileLayer
+        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        attribution='&copy; OpenStreetMap contributors'
+      />
+
+      {/* Trail yang sudah ditempuh */}
+      {effectiveTrail && effectiveTrail.length > 1 && (
+        <Polyline
+          positions={effectiveTrail}
+          color="#3b82f6"
+          weight={4}
+          opacity={0.85}
+          smoothFactor={1.5}
+        />
+      )}
+
+      {/* Rute navigasi (jika mode navigation) */}
+      {routeCoords && routeCoords.length > 1 && (
+        <Polyline
+          positions={routeCoords}
+          color="#9ca3af"
+          weight={4}
+          opacity={0.5}
+          dashArray="8, 8"
+        />
+      )}
+
+      {/* Marker titik awal */}
+      {showStartMarker && <Marker position={startPoint!} icon={startIcon} />}
+
+      {/* Marker titik akhir (hanya saat history) */}
+      {showEndMarker && <Marker position={endPoint!} icon={endIcon} />}
+
+      {/* Live marker posisi sekarang */}
+      {showLiveMarker && <Marker position={livePos!} icon={liveIcon} />}
+
+      {/* Auto behaviors */}
+      {mode === 'tracking' && <MapAutoCenter position={livePos} />}
+      {mode === 'history' && effectiveTrail && effectiveTrail.length > 0 && (
+        <MapFitBounds trail={effectiveTrail} />
+      )}
+    </MapContainer>
   );
-}
+});
+
+export default RideMap;

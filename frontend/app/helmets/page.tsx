@@ -36,7 +36,7 @@ type ConnectionStatus = 'connected' | 'offline';
 interface Helmet {
   id: string;
   deviceId: string;
-  name: string;
+  deviceName: string;
   battery: number;
   connection: ConnectionStatus;
   isActive: boolean;
@@ -165,19 +165,19 @@ function PairModal({
   onToast: (msg: string, type: ToastType) => void;
 }) {
   const [deviceId, setDeviceId] = useState('');
-  const [name, setName] = useState('');
+  const [deviceName, setDeviceName] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!deviceId.trim() || !name.trim()) return;
+    if (!deviceId.trim() || !deviceName.trim()) return;
     setLoading(true);
     try {
       const res = await apiFetch<ApiResponse<Helmet>>('/helmets', {
         method: 'POST',
-        body: JSON.stringify({ device_id: deviceId.trim(), name: name.trim() }),
+        body: JSON.stringify({ device_id: deviceId.trim(), name: deviceName.trim() }),
       });
       onPaired(res.data);
-      onToast(`"${res.data.name}" successfully paired.`, 'success');
+      onToast(`"${res.data.deviceName}" successfully paired.`, 'success');
       onClose();
     } catch (err: unknown) {
       onToast(err instanceof Error ? err.message : 'Failed to pair helmet.', 'error');
@@ -231,8 +231,8 @@ function PairModal({
             </label>
             <input
               type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
+              value={deviceName}
+              onChange={(e) => setDeviceName(e.target.value)}
               placeholder="Enter Name"
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
@@ -242,7 +242,7 @@ function PairModal({
           <div className="flex gap-2 pt-1">
             <button
               onClick={handleSubmit}
-              disabled={loading || !deviceId.trim() || !name.trim()}
+              disabled={loading || !deviceId.trim() || !deviceName.trim()}
               className="flex-1 py-3 rounded-xs font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
             >
@@ -276,13 +276,13 @@ function HelmetCard({
   onDelete: (id: string) => void;
 }) {
   const [editingName, setEditingName] = useState(false);
-  const [editName, setEditName] = useState(helmet.name);
+  const [editName, setEditName] = useState(helmet.deviceName);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [loadingActivate, setLoadingActivate] = useState(false);
   const [loadingDelete, setLoadingDelete] = useState(false);
 
   const commitRename = () => {
-    if (editName.trim() && editName.trim() !== helmet.name) {
+    if (editName.trim() && editName.trim() !== helmet.deviceName) {
       onRename(helmet.id, editName.trim());
     }
     setEditingName(false);
@@ -349,9 +349,9 @@ function HelmetCard({
                 />
               ) : (
                 <>
-                  <span className="text-sm font-black text-gray-900 truncate">{helmet.name}</span>
+                  <span className="text-sm font-black text-gray-900 truncate">{helmet.deviceName}</span>
                   <button
-                    onClick={() => { setEditName(helmet.name); setEditingName(true); }}
+                    onClick={() => { setEditName(helmet.deviceName); setEditingName(true); }}
                     className="text-gray-300 hover:text-gray-500 transition-colors shrink-0"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3">
@@ -549,7 +549,7 @@ export default function ManageHelmetsPage() {
             <div className="mb-5 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
               <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shrink-0" />
               <p className="text-sm text-orange-700">
-                <span className="font-black">{activeHelmet.name}</span>
+                <span className="font-black">{activeHelmet.deviceName}</span>
                 {' '}is currently active and sending real-time data.
               </p>
               <StatusBadge status={activeHelmet.connection} />

@@ -27,13 +27,13 @@ class HelmetController extends Controller
     {
         $request->validate([
             'device_id' => 'required|string|unique:helmets,device_id',
-            'name'      => 'required|string|max:100',
+            'device_name'      => 'required|string|max:100',
         ]);
 
         $helmet = Helmet::create([
             'user_id'   => $request->user()->id,
             'device_id' => $request->device_id,
-            'name'      => $request->name,
+            'device_name'      => $request->device_name,
             'battery'   => 0,
             'connection'=> 'offline',
             'is_active' => false,
@@ -51,10 +51,10 @@ class HelmetController extends Controller
         $helmet = Helmet::where('user_id', $request->user()->id)->findOrFail($id);
 
         $request->validate([
-            'name' => 'required|string|max:100',
+            'device_name' => 'required|string|max:100',
         ]);
 
-        $helmet->update(['name' => $request->name]);
+        $helmet->update(['device_name' => $request->device_name]);
 
         return response()->json([
             'message' => 'Helmet updated.',
@@ -74,7 +74,7 @@ class HelmetController extends Controller
         $helmet->update(['is_active' => true]);
 
         return response()->json([
-            'message' => "Helmet '{$helmet->name}' is now active.",
+            'message' => "Helmet '{$helmet->device_name}' is now active.",
             'data'    => $this->formatHelmet($helmet->fresh()),
         ]);
     }
@@ -108,10 +108,7 @@ class HelmetController extends Controller
 
         $helmet->update([
             'battery'    => $request->battery,
-            'last_seen'  => now(),
-            // connection dihitung via accessor, tapi kita simpan juga ke DB
-            // untuk query langsung tanpa accessor
-            'connection' => 'connected',
+            'last_ping'  => now(),
         ]);
 
         return response()->json(['message' => 'Data received.']);
@@ -122,11 +119,10 @@ class HelmetController extends Controller
         return [
             'id'         => $helmet->id,
             'deviceId'   => $helmet->device_id,
-            'name'       => $helmet->name,
+            'deviceName' => $helmet->device_name,
             'battery'    => $helmet->battery,
-            'connection' => $helmet->connection, // pakai accessor
             'isActive'   => $helmet->is_active,
-            'lastSeen'   => $helmet->last_seen?->toIso8601String(),
+            'lastSeen'   => $helmet->last_ping?->toIso8601String(),
             'batteryLow' => $helmet->battery < 20,
         ];
     }

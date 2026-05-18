@@ -1,80 +1,47 @@
 <?php
 
 namespace App\Models;
-
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+ 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-
+use Illuminate\Database\Eloquent\Relations\HasMany;
+ 
 class Ride extends Model
 {
-    use HasFactory;
-
     protected $fillable = [
-        'user_id',
-        'name',
-        'start_time',
-        'end_time',
-        'duration',
-        'distance',
-        'avg_speed',
-        'calories',
-        'route',
-        'status',
+        'user_id', 'mode', 'distance', 'duration',
+        'avg_speed', 'max_speed', 'calories', 'status',
+        'start_lat', 'start_lng', 'end_lat', 'end_lng',
+        'started_at', 'paused_at', 'ended_at',
     ];
-
+ 
     protected $casts = [
-        'start_time' => 'datetime',
-        'end_time'   => 'datetime',
-        'route'      => 'array',
         'distance'   => 'float',
-        'avg_speed'  => 'float',
         'duration'   => 'integer',
-        'calories'   => 'integer',
+        'avg_speed'  => 'float',
+        'max_speed'  => 'float',
+        'calories'   => 'float',
+        'start_lat'  => 'float',
+        'start_lng'  => 'float',
+        'end_lat'    => 'float',
+        'end_lng'    => 'float',
+        'started_at' => 'datetime',
+        'paused_at'  => 'datetime',
+        'ended_at'   => 'datetime',
     ];
-
-
+ 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
-
-    // ── Computed / Helper ──────────────────────────────────────────────────
-
-    /**
-     * Formatted duration: "1h 45m" or "28m"
-     */
-    public function getFormattedDurationAttribute(): string
+ 
+    public function locations(): HasMany
     {
-        if (!$this->duration) return '—';
-
-        $hours   = intdiv($this->duration, 3600);
-        $minutes = intdiv($this->duration % 3600, 60);
-
-        if ($hours > 0) {
-            return "{$hours}h {$minutes}m";
-        }
-
-        return "{$minutes}m";
+        return $this->hasMany(RideLocation::class)->orderBy('recorded_at');
     }
-
-    /**
-     * Formatted distance: "42.5 km"
-     */
-    public function getFormattedDistanceAttribute(): string
+ 
+    public function alerts(): HasMany
     {
-        if ($this->distance === null) return '—';
-        return number_format($this->distance, 1) . ' km';
-    }
-
-    /**
-     * Frontend-friendly status: 'Completed' | 'Incompleted'
-     */
-    public function getFrontendStatusAttribute(): string
-    {
-        return match ($this->status) {
-            'completed' => 'Completed',
-            default     => 'Incompleted',
-        };
+        return $this->hasMany(RideAlert::class)->latest();
     }
 }

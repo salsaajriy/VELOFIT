@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/sidebar';
-import RideTracker from '@/components/RideTracker';
 
 const rideHistory = [
   { date: 'Oct 24, 2025', time: '07:30 AM', route: 'Coastal Highway Path', distance: '24.8 km', duration: '1h 12m', status: 'Completed' },
@@ -53,10 +52,9 @@ export default function DashboardPage() {
             </h2>
             <div className="flex gap-3">
               <button
-                onClick={() => setRideActive(true)}
+                onClick={() => router.push('/ride')}
                 className="flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90 hover:shadow-lg"
-                style={{ background: 'linear-gradient(135deg, #f97316, #ef4444)' }}
-              >
+                style={{ background: 'linear-gradient(135deg, #f97316, #ef4444)' }}>
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                   <polygon points="5,3 19,12 5,21" />
                 </svg>
@@ -230,31 +228,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </main>
-      {/* ── RIDE TRACKER MODAL ───────────────────────── */}
-      {rideActive && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-          
-          {/* Background blur */}
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => setRideActive(false)}
-          />
-          
-          {/* Modal content */}
-          <div className="relative z-10 w-full max-w-md mx-4">
-            <button
-              onClick={() => setRideActive(false)}
-              className=" absolute top-2 right-2 m-3 font-bold">
-              ✕
-            </button>
-            <RideTracker
-              onRideSaved={() => {
-                setRideActive(false);
-              }}
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,157 +1,142 @@
 <?php
-
-namespace App\Http\Controllers\API;
-
+// app/Http/Controllers/Api/RideController.php
+ 
+namespace App\Http\Controllers\Api;
+ 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\{StartRideRequest, LocationRequest, FinishRideRequest};
+use App\Http\Resources\{RideResource, RideDetailResource};
 use App\Models\Ride;
-use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Validator;
-
+use App\Services\RideService;
+use Illuminate\Http\{JsonResponse, Request};
+ 
 class RideController extends Controller
 {
-    public function startRide(Request $request): JsonResponse
+    public function __construct(private readonly RideService $rideService) {}
+ 
+    /**
+     * POST /api/rides/start
+     */
+    public function start(StartRideRequest $request): JsonResponse
     {
-        $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:100',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors'  => $validator->errors(),
-            ], 422);
-        }
-
-        $ride = Ride::create([
-            'user_id'    => Auth::id(),
-            'name'       => $request->input('name', 'Untitled Ride'),
-            'start_time' => now(),
-            'status'     => 'active',
-        ]);
-
+        $ride = $this->rideService->startRide(
+            userId: $request->user()->id,
+            mode: $request->input('mode', 'free')
+        );
+ 
         return response()->json([
-            'message' => 'Ride started.',
-            'ride_id' => $ride->id,
-            'started_at' => $ride->start_time->toISOString(),
+            'success' => true,
+            'data'    => new RideResource($ride),
+            'message' => 'Ride dimulai.',
         ], 201);
     }
-
-    public function finishRide(Request $request, int $id): JsonResponse
+ 
+    /**
+     * POST /api/rides/location
+     * Terima batch GPS dari frontend
+     */
+    public function location(LocationRequest $request): JsonResponse
     {
-        $ride = Ride::where('id', $id)
-                    ->where('user_id', Auth::id())
-                    ->where('status', 'active')
-                    ->first();
-
-        if (!$ride) {
-            return response()->json([
-                'message' => 'Active ride not found or does not belong to you.',
-            ], 404);
+        $ride = Ride::where('user_id', $request->user()->id)
+            ->where('status', 'active')
+            ->latest()
+            ->firstOrFail();
+ 
+        $this->rideService->saveLocations($ride, $request->input('locations'));
+ 
+        return response()->json(['success' => true, 'message' => 'Lokasi disimpan.']);
+    }
+ 
+    /**
+     * POST /api/rides/{ride}/pause
+     */
+    public function pause(Request $request, Ride $ride): JsonResponse
+    {
+        if ($ride->user_id !== $request->user()->id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
-
-        $validator = Validator::make($request->all(), [
-            'distance'  => 'required|numeric|min:0',
-            'duration'  => 'required|integer|min:1',   // seconds
-            'calories'  => 'required|integer|min:0',
-            'route'     => 'required|array|min:1',
-            'route.*.lat' => 'required|numeric|between:-90,90',
-            'route.*.lng' => 'required|numeric|between:-180,180',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'message' => 'Validation failed.',
-                'errors'  => $validator->errors(),
-            ], 422);
-        }
-
-        $distance = (float) $request->input('distance');
-        $duration = (int)   $request->input('duration');   // seconds
-        $calories = (int)   $request->input('calories');
-        $route    = $request->input('route');
-
-        // avg_speed = distance / (duration in hours)
-        $avgSpeed = $duration > 0
-            ? round(($distance / ($duration / 3600)), 2)
-            : 0;
-
-        // A ride is "completed" if distance >= 0.5 km, else "incomplete"
-        $status = $distance >= 0.5 ? 'completed' : 'incomplete';
-
-        $ride->update([
-            'end_time'  => now(),
-            'duration'  => $duration,
-            'distance'  => $distance,
-            'avg_speed' => $avgSpeed,
-            'calories'  => $calories,
-            'route'     => $route,
-            'status'    => $status,
-        ]);
+        $updated = $this->rideService->pauseRide($ride);
 
         return response()->json([
-            'message'  => 'Ride finished.',
-            'ride'     => $this->formatRide($ride->fresh()),
+            'success' => true,
+            'data'    => new RideResource($updated),
         ]);
     }
-
-    public function history(Request $request): JsonResponse
-    {
-        $rides = Ride::where('user_id', Auth::id())
-                     ->whereIn('status', ['completed', 'incomplete'])
-                     ->orderBy('created_at', 'desc')
-                     ->get();
-
-        return response()->json([
-            'rides' => $rides->map(fn (Ride $r) => $this->formatRide($r)),
-        ]);
-    }
-
-    public function show(int $id): JsonResponse
-    {
-        $ride = Ride::where('id', $id)
-                    ->where('user_id', Auth::id())
-                    ->first();
-
-        if (!$ride) {
-            return response()->json(['message' => 'Ride not found.'], 404);
-        }
-
-        return response()->json([
-            'ride' => $this->formatRide($ride),
-        ]);
-    }
-
-    // ── Private helpers ────────────────────────────────────────────────────
 
     /**
-     * Map a Ride model to the shape expected by the frontend.
-     *
-     * routeCoords is an array of [lat, lng] tuples (not objects),
-     * which is what Leaflet / the history UI expects.
+     * POST /api/rides/{ride}/resume
      */
-    private function formatRide(Ride $ride): array
+    public function resume(Request $request, Ride $ride): JsonResponse
     {
-        return [
-            'id'          => (string) $ride->id,
-            'name'        => $ride->name,
-            'date'        => $ride->start_time
-                                ? $ride->start_time->format('M d, Y') . ' • ' . $ride->start_time->format('h:i A')
-                                : '—',
-            'start_time'  => $ride->start_time?->toISOString(),
-            'end_time'    => $ride->end_time?->toISOString(),
-            'distance'    => $ride->formatted_distance,     // "42.5 km"
-            'duration'    => $ride->formatted_duration,     // "1h 45m"
-            'duration_s'  => $ride->duration,               // raw seconds
-            'status'      => $ride->frontend_status,        // "Completed" | "Incompleted"
-            'avgSpeed'    => (float) ($ride->avg_speed ?? 0),
-            'calories'    => $ride->calories ?? 0,
-            // Convert [{lat, lng}] → [[lat, lng]] for Leaflet
-            'routeCoords' => collect($ride->route ?? [])
-                                ->map(fn ($p) => [(float) $p['lat'], (float) $p['lng']])
-                                ->values()
-                                ->all(),
-        ];
+        if ($ride->user_id !== $request->user()->id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+        $updated = $this->rideService->resumeRide($ride);
+
+        return response()->json([
+            'success' => true,
+            'data'    => new RideResource($updated),
+        ]);
+    }
+
+    /**
+     * POST /api/rides/{ride}/finish
+     */
+    public function finish(FinishRideRequest $request, Ride $ride): JsonResponse
+    {
+        if ($ride->user_id !== $request->user()->id) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+
+        $finalStats = $request->only(['distance', 'duration', 'avg_speed', 'max_speed', 'calories']);
+        
+        $finalRide = $this->rideService->finishRide(
+            $ride,
+            $finalStats
+        );
+
+        return response()->json([
+            'success' => true,
+            'data'    => new RideDetailResource($finalRide),
+            'message' => 'Ride selesai!',
+        ]);
+    }
+ 
+    /**
+     * GET /api/rides/history
+     */
+    public function history(Request $request): JsonResponse
+    {
+        $history = $this->rideService->getUserHistory(
+            userId: $request->user()->id,
+            perPage: (int) $request->query('per_page', 10)
+        );
+ 
+        return response()->json([
+            'success' => true,
+            'data'    => RideResource::collection($history),
+            'meta'    => [
+                'current_page' => $history->currentPage(),
+                'last_page'    => $history->lastPage(),
+                'total'        => $history->total(),
+            ],
+        ]);
+    }
+ 
+    /**
+     * GET /api/rides/{ride}
+     */
+    public function show(Request $request, int $rideId): JsonResponse
+    {
+        $ride = $this->rideService->getRideDetail($rideId, $request->user()->id);
+ 
+        if (!$ride) {
+            return response()->json(['success' => false, 'message' => 'Ride tidak ditemukan.'], 404);
+        }
+ 
+        return response()->json([
+            'success' => true,
+            'data'    => new RideDetailResource($ride),
+        ]);
     }
 }
