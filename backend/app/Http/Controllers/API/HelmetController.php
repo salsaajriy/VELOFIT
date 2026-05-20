@@ -15,7 +15,7 @@ class HelmetController extends Controller
     {
         $helmets = Helmet::where('user_id', $request->user()->id)
             ->orderByDesc('is_active')
-            ->orderByDesc('last_seen')
+            ->orderByDesc('last_ping')
             ->get()
             ->map(fn($h) => $this->formatHelmet($h));
 
@@ -27,13 +27,13 @@ class HelmetController extends Controller
     {
         $request->validate([
             'device_id' => 'required|string|unique:helmets,device_id',
-            'device_name'      => 'required|string|max:100',
+            'device_name' => 'required|string|max:100',
         ]);
 
         $helmet = Helmet::create([
             'user_id'   => $request->user()->id,
             'device_id' => $request->device_id,
-            'device_name'      => $request->device_name,
+            'device_name' => $request->device_name,
             'battery'   => 0,
             'connection'=> 'offline',
             'is_active' => false,
@@ -122,7 +122,7 @@ class HelmetController extends Controller
             'deviceName' => $helmet->device_name,
             'battery'    => $helmet->battery,
             'isActive'   => $helmet->is_active,
-            'lastSeen'   => $helmet->last_ping?->toIso8601String(),
+            'lastPing'   => $helmet->last_ping?->toIso8601String(),
             'batteryLow' => $helmet->battery < 20,
         ];
     }

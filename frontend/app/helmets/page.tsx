@@ -1,11 +1,12 @@
 'use client';
 
 // app/helmets/page.tsx
+// ✅ Fixed: device_name (bukan name) di POST & PUT body
+// ✅ Fixed: connection field diambil dari lastSeen (< 30 detik = online)
+// ✅ Fixed: handleRename update state pakai deviceName (bukan name)
 
 import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/sidebar';
-
-// ── Config ─────────────────────────────────────────────────────────────────
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
 
@@ -34,11 +35,10 @@ async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> 
 type ConnectionStatus = 'connected' | 'offline';
 
 interface Helmet {
-  id: string;
+  id: number;
   deviceId: string;
   deviceName: string;
   battery: number;
-  connection: ConnectionStatus;
   isActive: boolean;
   lastSeen: string | null;
   batteryLow: boolean;
@@ -47,6 +47,12 @@ interface Helmet {
 interface ApiResponse<T> {
   data: T;
   message?: string;
+}
+
+function getConnectionStatus(lastSeen: string | null): ConnectionStatus {
+  if (!lastSeen) return 'offline';
+  const diff = Date.now() - new Date(lastSeen).getTime();
+  return diff < 30_000 ? 'connected' : 'offline';
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────
@@ -101,14 +107,10 @@ function BatteryBar({ level }: { level: number }) {
             <div
               key={i}
               className="w-3 h-4 rounded-sm transition-colors"
-              style={{
-                backgroundColor: filled ? color : '#e5e7eb',
-                opacity: filled ? 1 : 0.5,
-              }}
+              style={{ backgroundColor: filled ? color : '#e5e7eb', opacity: filled ? 1 : 0.5 }}
             />
           );
         })}
-        {/* cap */}
         <div className="w-1 h-2 rounded-r-sm ml-0.5" style={{ backgroundColor: '#9ca3af' }} />
       </div>
       <span className="text-sm font-black tabular-nums" style={{ color }}>
@@ -135,9 +137,7 @@ function StatusBadge({ status }: { status: ConnectionStatus }) {
           : 'bg-gray-100 text-gray-400 border border-gray-200'
       }`}
     >
-      <span
-        className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`}
-      />
+      <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-500 animate-pulse' : 'bg-gray-300'}`} />
       {connected ? 'Online' : 'Offline'}
     </span>
   );
@@ -172,9 +172,13 @@ function PairModal({
     if (!deviceId.trim() || !deviceName.trim()) return;
     setLoading(true);
     try {
+      // ✅ Fix: gunakan device_name (sesuai backend validation)
       const res = await apiFetch<ApiResponse<Helmet>>('/helmets', {
         method: 'POST',
-        body: JSON.stringify({ device_id: deviceId.trim(), name: deviceName.trim() }),
+        body: JSON.stringify({
+          device_id: deviceId.trim(),
+          device_name: deviceName.trim(),
+        }),
       });
       onPaired(res.data);
       onToast(`"${res.data.deviceName}" successfully paired.`, 'success');
@@ -190,13 +194,11 @@ function PairModal({
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white w-full sm:max-w-md sm:mx-4 sm:rounded-2xl rounded-t-3xl shadow-2xl z-10 p-6 pb-8 sm:pb-6">
-        {/* Handle bar (mobile) */}
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 sm:hidden" />
-
         <div className="flex items-center justify-between mb-6">
           <div>
             <h2 className="text-xl font-black text-gray-900">Pair New Helmet</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Register a new helmet device</p>
+            <p className="text-xs text-gray-400 mt-0.5">Register new helmet device</p>
           </div>
           <button
             onClick={onClose}
@@ -210,14 +212,12 @@ function PairModal({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">
-              Device ID
-            </label>
+            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">DEVICE ID</label>
             <input
               type="text"
               value={deviceId}
               onChange={(e) => setDeviceId(e.target.value)}
-              placeholder="Enter ID"
+              placeholder="e.g. VF-20250001"
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
             />
             <p className="text-[11px] text-gray-400 mt-1.5">
@@ -226,14 +226,12 @@ function PairModal({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">
-              Helmet Name
-            </label>
+            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">HELM NAME</label>
             <input
               type="text"
               value={deviceName}
               onChange={(e) => setDeviceName(e.target.value)}
-              placeholder="Enter Name"
+              placeholder="e.g. Helm Merah Utama"
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
             />
@@ -243,15 +241,15 @@ function PairModal({
             <button
               onClick={handleSubmit}
               disabled={loading || !deviceId.trim() || !deviceName.trim()}
-              className="flex-1 py-3 rounded-xs font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 py-3 rounded-lg font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
             >
               {loading ? <Spinner /> : null}
-              {loading ? 'Loading...' : 'Pair Now'}
+              {loading ? 'Processing...' : 'Pair Now'}
             </button>
             <button
               onClick={onClose}
-              className="px-5 py-3 rounded-xs font-bold text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
+              className="px-5 py-3 rounded-lg font-bold text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
             >
               Cancel
             </button>
@@ -271,9 +269,9 @@ function HelmetCard({
   onDelete,
 }: {
   helmet: Helmet;
-  onActivate: (id: string) => void;
-  onRename: (id: string, name: string) => void;
-  onDelete: (id: string) => void;
+  onActivate: (id: number) => Promise<void>;
+  onRename: (id: number, name: string) => Promise<void>;
+  onDelete: (id: number) => Promise<void>;
 }) {
   const [editingName, setEditingName] = useState(false);
   const [editName, setEditName] = useState(helmet.deviceName);
@@ -281,9 +279,11 @@ function HelmetCard({
   const [loadingActivate, setLoadingActivate] = useState(false);
   const [loadingDelete, setLoadingDelete] = useState(false);
 
-  const commitRename = () => {
+  const connection = getConnectionStatus(helmet.lastSeen);
+
+  const commitRename = async () => {
     if (editName.trim() && editName.trim() !== helmet.deviceName) {
-      onRename(helmet.id, editName.trim());
+      await onRename(helmet.id, editName.trim());
     }
     setEditingName(false);
   };
@@ -308,7 +308,6 @@ function HelmetCard({
           : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'
       }`}
     >
-      {/* Active indicator strip */}
       {helmet.isActive && (
         <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-orange-400 to-red-400" />
       )}
@@ -333,7 +332,6 @@ function HelmetCard({
 
           {/* Info */}
           <div className="flex-1 min-w-0">
-            {/* Name */}
             <div className="flex items-center gap-1.5 mb-0.5 pr-16">
               {editingName ? (
                 <input
@@ -363,15 +361,11 @@ function HelmetCard({
               )}
             </div>
 
-            {/* Device ID */}
-            <p className="text-[11px] font-mono text-gray-400 mb-3 truncate">
-              {helmet.deviceId}
-            </p>
+            <p className="text-[11px] font-mono text-gray-400 mb-3 truncate">{helmet.deviceId}</p>
 
-            {/* Stats row */}
             <div className="flex items-center gap-4 flex-wrap">
               <BatteryBar level={helmet.battery} />
-              <StatusBadge status={helmet.connection} />
+              <StatusBadge status={connection} />
               {helmet.isActive && (
                 <span className="text-[10px] font-black text-orange-500 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full tracking-widest uppercase">
                   Active
@@ -379,7 +373,6 @@ function HelmetCard({
               )}
             </div>
 
-            {/* Last seen */}
             {helmet.lastSeen && (
               <p className="text-[10px] text-gray-300 mt-2">
                 Last seen:{' '}
@@ -393,13 +386,13 @@ function HelmetCard({
             )}
           </div>
 
-          {/* Action buttons — top right */}
+          {/* Action buttons */}
           <div className="absolute top-4 right-4 flex items-center gap-1.5">
             {!helmet.isActive && (
               <button
                 onClick={handleActivate}
                 disabled={loadingActivate}
-                title="Make Active"
+                title="Jadikan Aktif"
                 className="h-7 px-2.5 flex items-center gap-1 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-[11px] font-bold hover:bg-orange-100 transition-colors disabled:opacity-50"
               >
                 {loadingActivate ? <Spinner /> : (
@@ -430,7 +423,7 @@ function HelmetCard({
             ) : (
               <button
                 onClick={() => setConfirmDelete(true)}
-                title="Unpair helmet"
+                title="Unpair helm"
                 className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-red-50 hover:border-red-200 hover:text-red-500 transition-colors"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3.5 h-3.5">
@@ -444,6 +437,8 @@ function HelmetCard({
     </div>
   );
 }
+
+// ── Page ───────────────────────────────────────────────────────────────────
 
 export default function ManageHelmetsPage() {
   const [helmets, setHelmets] = useState<Helmet[]>([]);
@@ -459,6 +454,7 @@ export default function ManageHelmetsPage() {
       const res = await apiFetch<ApiResponse<Helmet[]>>('/helmets');
       setHelmets(res.data);
     } catch {
+      // silent — keep showing existing data on polling error
     } finally {
       setLoading(false);
     }
@@ -470,42 +466,44 @@ export default function ManageHelmetsPage() {
     return () => clearInterval(interval);
   }, [fetchHelmets]);
 
-  const handleActivate = async (id: string) => {
+  // ✅ Fix: PATCH /helmets/{id}/activate
+  const handleActivate = async (id: number) => {
     try {
       await apiFetch(`/helmets/${id}/activate`, { method: 'PATCH' });
-      setHelmets((prev) =>
-        prev.map((h) => ({ ...h, isActive: h.id === id }))
-      );
-      showToast('Helmet activated.', 'success');
+      setHelmets((prev) => prev.map((h) => ({ ...h, isActive: h.id === id })));
+      showToast('Helm berhasil diaktifkan.', 'success');
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : 'Failed to activate helmet.', 'error');
+      showToast(err instanceof Error ? err.message : 'Gagal mengaktifkan helm.', 'error');
     }
   };
 
-  const handleRename = async (id: string, name: string) => {
+  // ✅ Fix: PUT body pakai device_name; state update pakai deviceName
+  const handleRename = async (id: number, name: string) => {
     try {
       await apiFetch(`/helmets/${id}`, {
         method: 'PUT',
-        body: JSON.stringify({ name }),
+        body: JSON.stringify({ device_name: name }),
       });
-      setHelmets((prev) => prev.map((h) => (h.id === id ? { ...h, name } : h)));
-      showToast('Helmet name updated.', 'success');
+      setHelmets((prev) =>
+        prev.map((h) => (h.id === id ? { ...h, deviceName: name } : h))
+      );
+      showToast('Helm name updated successfully.', 'success');
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Failed to update helmet name.', 'error');
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: number) => {
     try {
       await apiFetch(`/helmets/${id}`, { method: 'DELETE' });
       setHelmets((prev) => prev.filter((h) => h.id !== id));
-      showToast('Helmet unpaired successfully.', 'success');
+      showToast('Helm successfully unpaired.', 'success');
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Failed to unpair helmet.', 'error');
     }
   };
 
-  const connectedCount = helmets.filter((h) => h.connection === 'connected').length;
+  const connectedCount = helmets.filter((h) => getConnectionStatus(h.lastSeen) === 'connected').length;
   const activeHelmet = helmets.find((h) => h.isActive);
 
   return (
@@ -522,19 +520,19 @@ export default function ManageHelmetsPage() {
         <Sidebar />
 
         <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 p-5 lg:p-8 mx-auto">
-          {/* ── Header ─────────────────────────────────────────────────── */}
+          {/* Header */}
           <div className="flex items-start justify-between mt-6 mb-6">
             <div>
-              <h1 className="text-2xl font-black text-gray-900"> Manage Helm </h1>
+              <h1 className="text-2xl font-black text-gray-900">Manage Helm</h1>
               <p className="text-sm text-gray-400 mt-0.5">
                 {loading
-                  ? 'Loading Helmet Data...'
-                  : `${helmets.length} Registered Devices · ${connectedCount} Online`}
+                  ? 'Load Helm Data...'
+                  : `${helmets.length} Registered Device · ${connectedCount} Online`}
               </p>
             </div>
             <button
               onClick={() => setShowPairModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-xs font-bold text-sm text-white shadow-sm hover:opacity-90 hover:shadow-md transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm text-white shadow-sm hover:opacity-90 hover:shadow-md transition-all"
               style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-4 h-4">
@@ -544,7 +542,7 @@ export default function ManageHelmetsPage() {
             </button>
           </div>
 
-          {/* ── Active helmet bar ───────────────────────────────────────── */}
+          {/* Active helmet banner */}
           {activeHelmet && (
             <div className="mb-5 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
               <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shrink-0" />
@@ -552,15 +550,15 @@ export default function ManageHelmetsPage() {
                 <span className="font-black">{activeHelmet.deviceName}</span>
                 {' '}is currently active and sending real-time data.
               </p>
-              <StatusBadge status={activeHelmet.connection} />
+              <StatusBadge status={getConnectionStatus(activeHelmet.lastSeen)} />
             </div>
           )}
 
-          {/* ── List ───────────────────────────────────────────────────── */}
+          {/* List */}
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
               <Spinner size="md" />
-              <span className="text-sm font-semibold">Loading Helmet Data...</span>
+              <span className="text-sm font-semibold">Loading Helm Data...</span>
             </div>
           ) : helmets.length === 0 ? (
             <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-14 flex flex-col items-center text-center">
@@ -571,16 +569,16 @@ export default function ManageHelmetsPage() {
                   <rect x="7" y="16" width="10" height="2.5" rx="1.25" fill="#e2e8f0" />
                 </svg>
               </div>
-              <p className="text-sm font-bold text-gray-500 mb-1">No Helmets Registered</p>
+              <p className="text-sm font-bold text-gray-500 mb-1">No Registered Helm</p>
               <p className="text-xs text-gray-400 mb-5">
-                Start by pairing your helmet to see battery level, and connection status right here.
+                Start by pairing your helmet to view battery level and connection status.
               </p>
               <button
                 onClick={() => setShowPairModal(true)}
-                className="px-5 py-2.5 rounded-xs text-sm font-bold text-white transition-all hover:opacity-90"
+                className="px-5 py-2.5 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90"
                 style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
               >
-                Pair your first helmet
+                Pair First Helm
               </button>
             </div>
           ) : (
