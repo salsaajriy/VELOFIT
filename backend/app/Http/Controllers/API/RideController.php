@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/Api/RideController.php
  
 namespace App\Http\Controllers\Api;
  
@@ -13,15 +12,13 @@ use Illuminate\Http\{JsonResponse, Request};
 class RideController extends Controller
 {
     public function __construct(private readonly RideService $rideService) {}
- 
-    /**
-     * POST /api/rides/start
-     */
+
     public function start(StartRideRequest $request): JsonResponse
     {
         $ride = $this->rideService->startRide(
             userId: $request->user()->id,
-            mode: $request->input('mode', 'free')
+            mode: $request->input('mode', 'free'),
+            routeName: $request->input('route_name')
         );
  
         return response()->json([
@@ -31,14 +28,11 @@ class RideController extends Controller
         ], 201);
     }
  
-    /**
-     * POST /api/rides/location
-     * Terima batch GPS dari frontend
-     */
     public function location(LocationRequest $request): JsonResponse
     {
-        $ride = Ride::where('user_id', $request->user()->id)
-            ->where('status', 'active')
+        $ride = Ride::query()
+            ->where('user_id', $request->user()->id)
+            ->active()
             ->latest()
             ->firstOrFail();
  
@@ -46,10 +40,7 @@ class RideController extends Controller
  
         return response()->json(['success' => true, 'message' => 'Lokasi disimpan.']);
     }
- 
-    /**
-     * POST /api/rides/{ride}/pause
-     */
+
     public function pause(Request $request, Ride $ride): JsonResponse
     {
         if ($ride->user_id !== $request->user()->id) {
@@ -63,9 +54,6 @@ class RideController extends Controller
         ]);
     }
 
-    /**
-     * POST /api/rides/{ride}/resume
-     */
     public function resume(Request $request, Ride $ride): JsonResponse
     {
         if ($ride->user_id !== $request->user()->id) {
@@ -79,9 +67,6 @@ class RideController extends Controller
         ]);
     }
 
-    /**
-     * POST /api/rides/{ride}/finish
-     */
     public function finish(FinishRideRequest $request, Ride $ride): JsonResponse
     {
         if ($ride->user_id !== $request->user()->id) {
@@ -102,9 +87,6 @@ class RideController extends Controller
         ]);
     }
  
-    /**
-     * GET /api/rides/history
-     */
     public function history(Request $request): JsonResponse
     {
         $history = $this->rideService->getUserHistory(
@@ -123,9 +105,6 @@ class RideController extends Controller
         ]);
     }
  
-    /**
-     * GET /api/rides/{ride}
-     */
     public function show(Request $request, int $rideId): JsonResponse
     {
         $ride = $this->rideService->getRideDetail($rideId, $request->user()->id);
@@ -137,6 +116,22 @@ class RideController extends Controller
         return response()->json([
             'success' => true,
             'data'    => new RideDetailResource($ride),
+        ]);
+    }
+
+    public function active(Request $request): JsonResponse
+    {
+        $ride = Ride::query()
+            ->where('user_id', $request->user()->id)
+            ->active()
+            ->latest()
+            ->first();
+
+        return response()->json([
+            'success' => true,
+            'data' => $ride
+                ? new RideResource($ride)
+                : null,
         ]);
     }
 }

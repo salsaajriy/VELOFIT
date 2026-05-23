@@ -5,7 +5,9 @@ namespace App\Services;
 use App\Models\Ride;
 use App\Models\RideLocation;
 use App\Models\RideAlert;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
  
 class RideService
 {
@@ -13,27 +15,37 @@ class RideService
         private readonly RideStatsService $statsService
     ) {}
  
-    /**
-     * Mulai ride baru
-     */
-    public function startRide(int $userId, string $mode = 'free'): Ride
+    public function startRide(int $userId, string $mode = 'free', ?string $routeName = null): Ride
     {
-        // Batalkan ride sebelumnya yang masih active/paused
-        Ride::where('user_id', $userId)
-            ->whereIn('status', ['active', 'paused'])
-            ->update(['status' => 'abandoned']);
- 
+        $activeRide = Ride::where('user_id', $userId)
+            ->active()
+            ->first();
+
+        if ($activeRide) {
+            throw new \Exception(
+                'Still have an active ride.'
+            );
+        }
+
+        $user = User::findOrFail($userId);
+
+        if (!$user->weight) {
+            throw ValidationException::withMessages([
+                'weight' => [
+                    'Please complete your weight information before starting an activity.'
+                ]
+            ]);
+        }
+
         return Ride::create([
             'user_id'    => $userId,
             'mode'       => $mode,
             'status'     => 'active',
             'started_at' => now(),
+            'route_name' => $routeName,
         ]);
     }
  
-    /**
-     * Simpan batch koordinat GPS
-     */
     public function saveLocations(Ride $ride, array $locations): void
     {
         if (empty($locations)) return;
@@ -44,6 +56,7 @@ class RideService
             'longitude'   => $loc['longitude'],
             'speed'       => $loc['speed'] ?? 0,
             'altitude'    => $loc['altitude'] ?? null,
+            'accuracy'    => $loc['accuracy'] ?? null,
             'recorded_at' => $loc['recorded_at'] ?? now(),
             'created_at'  => now(),
             'updated_at'  => now(),
@@ -51,18 +64,14 @@ class RideService
  
         RideLocation::insert($records);
  
-        // Update start_lat/lng jika belum ada
-        if (!$ride->start_lat && count($records) > 0) {
+        if (is_null($ride->start_lat) && !empty($records)) {
             $ride->update([
                 'start_lat' => $records[0]['latitude'],
                 'start_lng' => $records[0]['longitude'],
             ]);
         }
     }
- 
-    /**
-     * Pause ride
-     */
+
     public function pauseRide(Ride $ride): Ride
     {
         $ride->update([
@@ -71,10 +80,7 @@ class RideService
         ]);
         return $ride->fresh();
     }
- 
-    /**
-     * Resume ride
-     */
+
     public function resumeRide(Ride $ride): Ride
     {
         $ride->update([
@@ -84,31 +90,46 @@ class RideService
         return $ride->fresh();
     }
  
-    /**
-     * Selesaikan ride & hitung statistik akhir
-     */
     public function finishRide(Ride $ride, array $finalStats): Ride
     {
         $lastLocation = $ride->locations()->latest('recorded_at')->first();
- 
+
+        $ride->loadMissing('user');
+        if (!$ride->user?->weight) {
+            throw ValidationException::withMessages([
+                'weight' => [
+                    'User weight is required to calculate calories.'
+                ]
+            ]);
+        }
+
+        $userWeight = $ride->user->weight;
+
+        $calories = $this->statsService->calculateCalories(
+            durationSeconds: $finalStats['duration'],
+            weightKg: $userWeight,
+            avgSpeed: $finalStats['avg_speed']
+        );
+
+        $avgSpeed = $this->statsService->calculateAverageSpeed(
+            distanceKm: $finalStats['distance'],
+            durationSeconds: $finalStats['duration']
+        );
         $ride->update([
             'status'     => 'completed',
             'ended_at'   => now(),
             'distance'   => $finalStats['distance'],
             'duration'   => $finalStats['duration'],
-            'avg_speed'  => $finalStats['avg_speed'],
+            'avg_speed'  => $avgSpeed,
             'max_speed'  => $finalStats['max_speed'],
-            'calories'   => $finalStats['calories'],
             'end_lat'    => $lastLocation?->latitude,
             'end_lng'    => $lastLocation?->longitude,
+            'calories'   => $calories,
         ]);
  
         return $ride->fresh(['locations', 'alerts']);
     }
- 
-    /**
-     * Ambil history ride user (paginated)
-     */
+
     public function getUserHistory(int $userId, int $perPage = 10)
     {
         return Ride::where('user_id', $userId)
@@ -116,10 +137,7 @@ class RideService
             ->orderByDesc('started_at')
             ->paginate($perPage);
     }
- 
-    /**
-     * Ambil detail ride beserta lokasi
-     */
+
     public function getRideDetail(int $rideId, int $userId): ?Ride
     {
         return Ride::where('id', $rideId)

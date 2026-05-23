@@ -20,6 +20,8 @@ class ProfileController extends Controller
             'name' => 'nullable|string|max:100',
             'weight' => 'nullable|numeric',
             'height' => 'nullable|numeric',
+            'birth_date' => 'nullable|date',    
+            'gender' => 'nullable|in:male,female',
             'contact1' => 'nullable|string',
             'contact2' => 'nullable|string',
             'name1' => 'nullable|string',
@@ -29,7 +31,7 @@ class ProfileController extends Controller
         $user->update($data);
 
         return response()->json([
-            'message' => 'Profile updated',
+            'message' => 'Profile updated successfully.',
             'data' => $user
         ]);
     }

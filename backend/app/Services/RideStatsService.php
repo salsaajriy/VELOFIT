@@ -1,50 +1,80 @@
 <?php
 
 namespace App\Services;
- 
+
 class RideStatsService
 {
-    // MET value untuk bersepeda sedang (16-19 km/h)
-    private const MET_CYCLING = 8.0;
-    private const TEMP_THRESHOLD = 38.0; // Celsius
-    private const IMPACT_G_THRESHOLD = 4.0; // G-force
- 
-    /**
-     * Hitung kalori dengan formula MET
-     * Kalori = MET x Berat Badan (kg) x Durasi (jam)
-     */
+    private const TEMP_THRESHOLD = 38.0;
+    private const IMPACT_G_THRESHOLD = 4.0;
+
+    private function getMetBySpeed(float $avgSpeed): float
+    {
+        return match (true) {
+            $avgSpeed < 16 => 4.0,
+            $avgSpeed < 19 => 6.8,
+            $avgSpeed < 22 => 8.0,
+            $avgSpeed < 25 => 10.0,
+            default => 12.0,
+        };
+    }
+
     public function calculateCalories(
         float $durationSeconds,
-        float $weightKg = 70.0
+        float $weightKg,
+        float $avgSpeed
     ): float {
-        $durationHours = $durationSeconds / 3600;
-        return round(self::MET_CYCLING * $weightKg * $durationHours, 2);
+        $met = $this->getMetBySpeed($avgSpeed);
+
+        $hours = $durationSeconds / 3600;
+
+        return round(
+            $met * $weightKg * $hours,
+            2
+        );
     }
- 
-    /**
-     * Tentukan alert berdasarkan data IoT
-     */
+
+    public function calculateAverageSpeed(
+        float $distanceKm,
+        int $durationSeconds
+    ): float {
+        if ($durationSeconds <= 0) {
+            return 0;
+        }
+
+        return round(
+            $distanceKm / ($durationSeconds / 3600),
+            2
+        );
+    }
+
     public function checkAlerts(array $iotData): ?array
     {
         $bodyTemp = $iotData['body_temperature'] ?? null;
-        $impact   = $iotData['impact_detected'] ?? false;
- 
-        if ($impact) {
+        $impactG  = $iotData['impact_g'] ?? 0;
+
+        if ($impactG >= self::IMPACT_G_THRESHOLD) {
             return [
-                'type'    => 'impact',
-                'message' => 'Benturan keras terdeteksi! Periksa kondisi pengendara.',
-                'metadata' => $iotData,
+                'type' => 'impact',
+                'message' => 'Benturan keras terdeteksi!',
+                'metadata' => [
+                    'impact_g' => $impactG,
+                ],
             ];
         }
- 
-        if ($bodyTemp && $bodyTemp > self::TEMP_THRESHOLD) {
+
+        if (
+            $bodyTemp !== null &&
+            $bodyTemp > self::TEMP_THRESHOLD
+        ) {
             return [
-                'type'    => 'temperature',
-                'message' => "Suhu tubuh tinggi: {$bodyTemp}°C. Istirahat dan minum air.",
-                'metadata' => ['body_temperature' => $bodyTemp],
+                'type' => 'temperature',
+                'message' => "Suhu tubuh tinggi: {$bodyTemp}°C",
+                'metadata' => [
+                    'body_temperature' => $bodyTemp,
+                ],
             ];
         }
- 
+
         return null;
     }
 }

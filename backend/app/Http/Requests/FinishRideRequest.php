@@ -14,7 +14,6 @@ class FinishRideRequest extends FormRequest
             'duration' => 'required|integer|min:0',
             'avg_speed'=> 'required|numeric|min:0',
             'max_speed'=> 'required|numeric|min:0',
-            'calories' => 'required|numeric|min:0',
         ];
     }
 }

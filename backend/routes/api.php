@@ -58,7 +58,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('rides')->group(function () {
         Route::post('/start',    [RideController::class, 'start']);
         Route::post('/location', [RideController::class, 'location']);
+        Route::get('/active',    [RideController::class, 'active']);
         Route::get('/history',   [RideController::class, 'history']);
+
     
         Route::post('/{ride}/pause',  [RideController::class, 'pause']);
         Route::post('/{ride}/resume', [RideController::class, 'resume']);

@@ -15,14 +15,12 @@ class HelmetController extends Controller
     {
         $helmets = Helmet::where('user_id', $request->user()->id)
             ->orderByDesc('is_active')
-            ->orderByDesc('last_ping')
             ->get()
             ->map(fn($h) => $this->formatHelmet($h));
 
         return response()->json(['data' => $helmets]);
     }
 
-    // POST /api/helmets — Pair device
     public function store(Request $request): JsonResponse
     {
         $request->validate([
@@ -45,7 +43,6 @@ class HelmetController extends Controller
         ], 201);
     }
 
-    // PUT /api/helmets/{id} — Update nama
     public function update(Request $request, int $id): JsonResponse
     {
         $helmet = Helmet::where('user_id', $request->user()->id)->findOrFail($id);
@@ -62,15 +59,12 @@ class HelmetController extends Controller
         ]);
     }
 
-    // PATCH /api/helmets/{id}/activate — Set active
     public function activate(Request $request, int $id): JsonResponse
     {
         $helmet = Helmet::where('user_id', $request->user()->id)->findOrFail($id);
 
-        // Nonaktifkan semua helm user ini
         Helmet::where('user_id', $request->user()->id)->update(['is_active' => false]);
 
-        // Aktifkan helm yang dipilih
         $helmet->update(['is_active' => true]);
 
         return response()->json([
@@ -79,7 +73,6 @@ class HelmetController extends Controller
         ]);
     }
 
-    // DELETE /api/helmets/{id} — Unpair
     public function destroy(Request $request, int $id): JsonResponse
     {
         $helmet = Helmet::where('user_id', $request->user()->id)->findOrFail($id);
@@ -88,10 +81,6 @@ class HelmetController extends Controller
         return response()->json(['message' => 'Helmet unpaired successfully.']);
     }
 
-    // -----------------------------------------------
-    // ENDPOINT UNTUK DEVICE (tidak perlu auth user)
-    // POST /api/helmet-data
-    // -----------------------------------------------
     public function receiveData(Request $request): JsonResponse
     {
         $request->validate([

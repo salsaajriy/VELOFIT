@@ -1,6 +1,5 @@
 <?php
-// app/Http/Requests/StartRideRequest.php
- 
+
 namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
  
@@ -12,13 +11,11 @@ class StartRideRequest extends FormRequest
     {
         return [
             'mode' => 'nullable|string|in:free,navigation',
+            'route_name' => 'nullable|string|max:255',
         ];
     }
 }
  
-// ─────────────────────────────────────────────────
- 
-// app/Http/Requests/LocationRequest.php
 class LocationRequest extends FormRequest
 {
     public function authorize(): bool { return true; }
@@ -35,9 +32,6 @@ class LocationRequest extends FormRequest
     }
 }
  
-// ─────────────────────────────────────────────────
- 
-// app/Http/Requests/FinishRideRequest.php
 class FinishRideRequest extends FormRequest
 {
     public function authorize(): bool { return true; }
