@@ -14,8 +14,10 @@ return new class extends Migration {
                   ->cascadeOnDelete();
             $table->decimal('latitude', 10, 7);
             $table->decimal('longitude', 10, 7);
-            $table->decimal('speed', 6, 2)->default(0);   // km/h
-            $table->decimal('altitude', 8, 2)->nullable(); // meter
+            $table->decimal('speed', 6, 2)->default(0);   
+            $table->decimal('altitude', 8, 2)->nullable(); 
+            $table->decimal('accuracy', 8, 2)
+                  ->nullable();
             $table->timestamp('recorded_at');
             $table->timestamps();
  

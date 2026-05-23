@@ -13,7 +13,6 @@ return new class extends Migration {
                   ->constrained()
                   ->cascadeOnDelete();
             $table->string('type');
-            // type: impact | temperature | sos
             $table->string('message');
             $table->json('metadata')->nullable();
             $table->boolean('acknowledged')->default(false);
