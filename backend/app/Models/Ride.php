@@ -2,6 +2,7 @@
 
 namespace App\Models;
  
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -9,10 +10,31 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class Ride extends Model
 {
     protected $fillable = [
-        'user_id', 'mode', 'distance', 'duration',
-        'avg_speed', 'max_speed', 'calories', 'status',
-        'start_lat', 'start_lng', 'end_lat', 'end_lng',
-        'started_at', 'paused_at', 'ended_at',
+        'user_id',
+        'mode',
+
+        'distance',
+        'duration',
+
+        'avg_speed',
+        'max_speed',
+        'calories',
+
+        'status',
+
+        'start_lat',
+        'start_lng',
+        'end_lat',
+        'end_lng',
+
+        'started_at',
+        'paused_at',
+        'ended_at',
+
+        'route_name',
+        'source',
+        'auto_paused_count',
+        'completed_reason',
     ];
  
     protected $casts = [
@@ -25,6 +47,7 @@ class Ride extends Model
         'start_lng'  => 'float',
         'end_lat'    => 'float',
         'end_lng'    => 'float',
+        'auto_paused_count' => 'integer',
         'started_at' => 'datetime',
         'paused_at'  => 'datetime',
         'ended_at'   => 'datetime',
@@ -43,5 +66,13 @@ class Ride extends Model
     public function alerts(): HasMany
     {
         return $this->hasMany(RideAlert::class)->latest();
+    }
+
+    public function scopeActive(Builder $query): Builder
+    {
+        return $query->whereIn('status', [
+            'active',
+            'paused'
+        ]);
     }
 }

@@ -8,15 +8,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class RideLocation extends Model
 {
     protected $fillable = [
-        'ride_id', 'latitude', 'longitude',
-        'speed', 'altitude', 'recorded_at',
+        'ride_id',
+        'latitude',
+        'longitude',
+        'speed',
+        'altitude',
+        'accuracy',
+        'recorded_at',
     ];
  
     protected $casts = [
-        'latitude'    => 'float',
-        'longitude'   => 'float',
-        'speed'       => 'float',
-        'altitude'    => 'float',
+        'latitude' => 'float',
+        'longitude' => 'float',
+        'speed' => 'float',
+        'altitude' => 'float',
+        'accuracy' => 'float',
         'recorded_at' => 'datetime',
     ];
  
