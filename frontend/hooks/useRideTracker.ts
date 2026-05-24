@@ -5,21 +5,17 @@ import { haversineDistance } from '@/lib/haversine';
 import { rideService } from '@/services/rideService';
 import type { RideStatus, RideMode, RidePoint, RideStats, ActiveRide } from '@/types/ride';
  
-// ── Konstanta ────────────────────────────────────────────────
-const NOISE_THRESHOLD_M    = 3;      // Abaikan gerakan < 3 meter
-const BATCH_SIZE           = 5;      // Kirim ke API setiap 5 titik
-const BATCH_INTERVAL_MS    = 10_000; // Atau setiap 10 detik
-const MET_CYCLING          = 8.0;
-const USER_WEIGHT_KG       = 70;     // Ambil dari profil user existing
+const NOISE_THRESHOLD_M    = 3;     
+const BATCH_SIZE           = 5;     
+const BATCH_INTERVAL_MS    = 10_000;  
  
-// ── Types ────────────────────────────────────────────────────
 interface UseRideTrackerReturn {
   status:      RideStatus;
   stats:       RideStats;
   currentPos:  { lat: number; lng: number } | null;
-  trail:       Array<[number, number]>;  // untuk Leaflet polyline
+  trail:       Array<[number, number]>;  
   activeRide:  ActiveRide | null;
-  elapsedTime: number; // detik
+  elapsedTime: number; 
   startRide:   (mode: RideMode) => Promise<void>;
   pauseRide:   () => Promise<void>;
   resumeRide:  () => Promise<void>;
@@ -27,7 +23,6 @@ interface UseRideTrackerReturn {
   error:       string | null;
 }
  
-// ── Hook ─────────────────────────────────────────────────────
 export function useRideTracker(): UseRideTrackerReturn {
   const [status, setStatus]       = useState<RideStatus>('idle');
   const [error, setError]         = useState<string | null>(null);
@@ -39,7 +34,6 @@ export function useRideTracker(): UseRideTrackerReturn {
     distance: 0, duration: 0, avgSpeed: 0, maxSpeed: 0, calories: 0,
   });
  
-  // Refs — tidak perlu re-render saat berubah
   const watchIdRef      = useRef<number | null>(null);
   const timerRef        = useRef<NodeJS.Timeout | null>(null);
   const batchTimerRef   = useRef<NodeJS.Timeout | null>(null);
@@ -51,7 +45,6 @@ export function useRideTracker(): UseRideTrackerReturn {
   const maxSpeedRef     = useRef(0);
   const speedHistory    = useRef<number[]>([]);
  
-  // ── Cleanup ──────────────────────────────────────────────
   const cleanup = useCallback(() => {
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
@@ -60,14 +53,48 @@ export function useRideTracker(): UseRideTrackerReturn {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     if (batchTimerRef.current) { clearInterval(batchTimerRef.current); batchTimerRef.current = null; }
   }, []);
+
+  const loadActiveRide = useCallback(async () => {
+    try {
+      const ride = await rideService.getActiveRide();
+
+      if (!ride) return;
+
+      setActiveRide(ride);
+      setStats({
+        distance: ride.distance ?? 0,
+        duration: ride.duration ?? 0,
+        avgSpeed: ride.avg_speed ?? 0,
+        maxSpeed: ride.max_speed ?? 0,
+        calories: ride.calories ?? 0,
+      });
+
+      totalDistance.current = ride.distance ?? 0;
+      maxSpeedRef.current = ride.max_speed ?? 0;
+
+      setElapsedTime(ride.duration ?? 0);
+      pausedDuration.current = ride.duration ?? 0;
+
+      if (ride.status === 'paused') {
+        setStatus('paused');
+      } else {
+        setStatus('tracking');
+      }
+    } catch {
+    }
+  }, []);
  
-  useEffect(() => () => cleanup(), [cleanup]);
+  
+  useEffect(() => {
+    const init = async () => {
+      await loadActiveRide();
+    };
+
+    init();
+
+    return () => cleanup();
+  }, [cleanup, loadActiveRide]);
  
-  // ── Kalori ───────────────────────────────────────────────
-  const calcCalories = (durationSec: number) =>
-    Math.round(MET_CYCLING * USER_WEIGHT_KG * (durationSec / 3600) * 10) / 10;
- 
-  // ── Flush batch GPS ke API ───────────────────────────────
   const flushBatch = useCallback(async () => {
     if (!locationBatch.current.length || !activeRide) return;
     const toSend = [...locationBatch.current];
@@ -75,31 +102,26 @@ export function useRideTracker(): UseRideTrackerReturn {
     try {
       await rideService.sendLocations(toSend);
     } catch {
-      // Simpan kembali jika gagal — retry di flush berikutnya
       locationBatch.current = [...toSend, ...locationBatch.current];
     }
   }, [activeRide]);
  
-  // ── GPS Position Handler ─────────────────────────────────
   const handlePosition = useCallback((pos: GeolocationPosition) => {
     const { latitude, longitude, speed } = pos.coords;
     const timestamp = pos.timestamp;
     const speedKmh  = speed ? speed * 3.6 : 0;
  
-    // Update posisi saat ini
     setCurrentPos({ lat: latitude, lng: longitude });
  
-    // Noise filter
     if (lastPointRef.current) {
       const distM = haversineDistance(
         lastPointRef.current.lat, lastPointRef.current.lng,
         latitude, longitude
       ) * 1000;
  
-      if (distM < NOISE_THRESHOLD_M) return; // Abaikan
+      if (distM < NOISE_THRESHOLD_M) return; 
     }
  
-    // Hitung jarak
     if (lastPointRef.current) {
       const distKm = haversineDistance(
         lastPointRef.current.lat, lastPointRef.current.lng,
@@ -108,7 +130,6 @@ export function useRideTracker(): UseRideTrackerReturn {
       totalDistance.current += distKm;
     }
  
-    // Update max speed
     if (speedKmh > maxSpeedRef.current) maxSpeedRef.current = speedKmh;
     speedHistory.current.push(speedKmh);
  
@@ -116,13 +137,10 @@ export function useRideTracker(): UseRideTrackerReturn {
     lastPointRef.current = newPoint;
     locationBatch.current.push(newPoint);
  
-    // Update trail untuk map
     setTrail((prev) => [...prev, [latitude, longitude]]);
- 
-    // Auto-flush jika batch sudah cukup besar
+
     if (locationBatch.current.length >= BATCH_SIZE) flushBatch();
- 
-    // Update stats (kalkulasi lokal, tidak tunggu API)
+
     setStats((prev) => {
       const avgSpeed =
         speedHistory.current.length > 0
@@ -133,28 +151,26 @@ export function useRideTracker(): UseRideTrackerReturn {
         duration:  prev.duration,
         avgSpeed:  Math.round(avgSpeed * 10) / 10,
         maxSpeed:  Math.round(maxSpeedRef.current * 10) / 10,
-        calories:  calcCalories(prev.duration),
+        calories:  prev.calories,
       };
     });
   }, [flushBatch]);
  
-  // ── GPS Error Handler ────────────────────────────────────
   const handleGpsError = useCallback((err: GeolocationPositionError) => {
     setError(`GPS Error: ${err.message}`);
   }, []);
- 
-  // ── Timer ────────────────────────────────────────────────
+
   const startTimer = useCallback(() => {
     segmentStart.current = Date.now();
     timerRef.current = setInterval(() => {
       const segmentElapsed = Math.floor((Date.now() - segmentStart.current) / 1000);
       const total = pausedDuration.current + segmentElapsed;
       setElapsedTime(total);
-      setStats((prev) => ({ ...prev, duration: total, calories: calcCalories(total) }));
+      setStats((prev) => ({ ...prev, duration: total, calories: 0 }));
     }, 1000);
   }, []);
- 
-  // ── Start Ride ───────────────────────────────────────────
+
+
   const startRide = useCallback(async (mode: RideMode) => {
     setError(null);
     setStatus('starting');
@@ -167,20 +183,17 @@ export function useRideTracker(): UseRideTrackerReturn {
  
     try {
       const ride = await rideService.startRide(mode);
-      setActiveRide({ id: ride.id, mode, status: 'active', startedAt: ride.startedAt });
+      setActiveRide({ id: ride.id, mode, status: 'starting', distance: 0, duration: 0, avg_speed: 0, max_speed: 0, calories: 0, started_at: ride.started_at });
       setStatus('tracking');
  
-      // Mulai GPS watch
       watchIdRef.current = navigator.geolocation.watchPosition(
         handlePosition,
         handleGpsError,
         { enableHighAccuracy: true, timeout: 10_000, maximumAge: 1_000 }
       );
- 
-      // Mulai timer
+
       startTimer();
  
-      // Batch timer — flush setiap BATCH_INTERVAL_MS
       batchTimerRef.current = setInterval(flushBatch, BATCH_INTERVAL_MS);
     } catch (e: unknown) {
       setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Gagal memulai ride.');
@@ -188,7 +201,7 @@ export function useRideTracker(): UseRideTrackerReturn {
     }
   }, [handlePosition, handleGpsError, startTimer, flushBatch]);
  
-  // ── Pause Ride ───────────────────────────────────────────
+
   const pauseRide = useCallback(async () => {
     if (!activeRide || status !== 'tracking') return;
  
@@ -198,15 +211,14 @@ export function useRideTracker(): UseRideTrackerReturn {
       watchIdRef.current = null;
     }
  
-    // Catat waktu yang sudah berjalan sebelum pause
     pausedDuration.current = elapsedTime;
-    await flushBatch(); // Kirim sisa batch
+    await flushBatch(); 
  
     await rideService.pauseRide(activeRide.id);
     setStatus('paused');
   }, [activeRide, status, elapsedTime, flushBatch]);
  
-  // ── Resume Ride ──────────────────────────────────────────
+
   const resumeRide = useCallback(async () => {
     if (!activeRide || status !== 'paused') return;
  
@@ -222,13 +234,13 @@ export function useRideTracker(): UseRideTrackerReturn {
     batchTimerRef.current = setInterval(flushBatch, BATCH_INTERVAL_MS);
   }, [activeRide, status, handlePosition, handleGpsError, startTimer, flushBatch]);
  
-  // ── Finish Ride ──────────────────────────────────────────
+
   const finishRide = useCallback(async () => {
     if (!activeRide) return;
  
     setStatus('finishing');
     cleanup();
-    await flushBatch(); // Kirim sisa lokasi
+    await flushBatch(); 
  
     const avgSpeed =
       speedHistory.current.length > 0
@@ -240,11 +252,22 @@ export function useRideTracker(): UseRideTrackerReturn {
       duration:  elapsedTime,
       avgSpeed:  Math.round(avgSpeed * 10) / 10,
       maxSpeed:  Math.round(maxSpeedRef.current * 10) / 10,
-      calories:  calcCalories(elapsedTime),
+      calories:  0,
     };
  
-    await rideService.finishRide(activeRide.id, finalStats);
-    setStats(finalStats);
+    const result = await rideService.finishRide(
+      activeRide.id,
+      finalStats
+    );
+
+    setStats({
+      distance: result.distance,
+      duration: result.duration,
+      avgSpeed: result.avg_speed,
+      maxSpeed: result.max_speed,
+      calories: result.calories,
+    });
+
     setStatus('completed');
   }, [activeRide, elapsedTime, cleanup, flushBatch]);
  

@@ -4,7 +4,7 @@ namespace App\Http\Controllers\Api;
  
 use App\Http\Controllers\Controller;
 use App\Http\Requests\{StartRideRequest, LocationRequest, FinishRideRequest};
-use App\Http\Resources\{RideResource, RideDetailResource};
+use App\Http\Resources\{RideResource, RideDetailResource, RideStatsResource};
 use App\Models\Ride;
 use App\Services\RideService;
 use Illuminate\Http\{JsonResponse, Request};
@@ -132,6 +132,18 @@ class RideController extends Controller
             'data' => $ride
                 ? new RideResource($ride)
                 : null,
+        ]);
+    }
+
+    public function stats(Request $request): JsonResponse
+    {
+        $stats = $this->rideService->getStats(
+            $request->user()->id
+        );
+
+        return response()->json([
+            'success' => true,
+            'data' => new RideStatsResource($stats),
         ]);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Ride;
 use App\Models\RideLocation;
 use App\Models\RideAlert;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
  
@@ -144,5 +145,47 @@ class RideService
             ->where('user_id', $userId)
             ->with(['locations', 'alerts'])
             ->first();
+    }
+
+    public function getStats(int $userId): array
+    {
+        $completedRides = Ride::query()
+            ->where('user_id', $userId)
+            ->where('status', 'completed');
+
+        $totalDistance = (float) $completedRides->sum('distance');
+        $totalDuration = (int) $completedRides->sum('duration');
+        $totalCalories = (float) $completedRides->sum('calories');
+
+        $totalRides = Ride::query()
+            ->where('user_id', $userId)
+            ->where('status', 'completed')
+            ->count();
+
+        $weeklyDistance = Ride::query()
+            ->where('user_id', $userId)
+            ->where('status', 'completed')
+            ->whereBetween('started_at', [
+                Carbon::now()->startOfWeek(),
+                Carbon::now()->endOfWeek(),
+            ])
+            ->sum('distance');
+
+        $monthlyDistance = Ride::query()
+            ->where('user_id', $userId)
+            ->where('status', 'completed')
+            ->whereMonth('started_at', now()->month)
+            ->whereYear('started_at', now()->year)
+            ->sum('distance');
+
+        return [
+            'total_rides' => $totalRides,
+            'total_distance' => round($totalDistance, 2),
+            'total_duration' => $totalDuration,
+            'total_calories' => round($totalCalories, 2),
+
+            'weekly_distance' => round($weeklyDistance, 2),
+            'monthly_distance' => round($monthlyDistance, 2),
+        ];
     }
 }

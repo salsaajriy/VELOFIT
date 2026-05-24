@@ -189,14 +189,13 @@ export default function HistoryPage() {
   const filtered = rides.filter((r) => {
     const matchSearch =
       r.mode.toLowerCase().includes(search.toLowerCase()) ||
-      formatDate(r.startedAt).toLowerCase().includes(search.toLowerCase());
+      formatDate(r.started_at).toLowerCase().includes(search.toLowerCase());
     const matchStatus =
       statusFilter === 'All' || r.status?.toLowerCase() === statusFilter.toLowerCase();
-    const matchTime = !cutoff || new Date(r.startedAt) >= cutoff;
+    const matchTime = !cutoff || new Date(r.started_at) >= cutoff;
     return matchSearch && matchStatus && matchTime;
   });
 
-  // ── Aggregates ────────────────────────────────────────────────────────
   const totals = rides.reduce(
     (acc, r) => ({
       distance: acc.distance + (r.distance  || 0),
@@ -209,7 +208,6 @@ export default function HistoryPage() {
   const mapCoords: [number, number][] =
     selectedRideDetail?.locations?.map(l => [l.lat, l.lng]) ?? [];
 
-  // ── Render ────────────────────────────────────────────────────────────
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans">
       <Sidebar />
@@ -402,7 +400,7 @@ export default function HistoryPage() {
                               </p>
                             </div>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {formatDate(ride.startedAt)}
+                              {formatDate(ride.started_at)}
                             </p>
                           </div>
                         </div>
@@ -491,7 +489,11 @@ export default function HistoryPage() {
                     <p className="text-xs text-gray-400">Loading route…</p>
                   </div>
                 ) : mapCoords.length > 0 ? (
-                  <RideMap coords={mapCoords} className="w-full h-full" />
+                  <RideMap
+                    coords={mapCoords}
+                    mode="history"
+                    className="w-full h-full"
+                  />
                 ) : (
                   <div className="w-full h-full bg-gray-50 flex flex-col
                                   items-center justify-center gap-2">
@@ -519,7 +521,7 @@ export default function HistoryPage() {
                       </h3>
                     </div>
                     <p className="text-xs text-gray-400">
-                      {formatDate(selectedRideDetail.startedAt)}
+                      {formatDate(selectedRideDetail.started_at)}
                     </p>
                   </div>
                   <span className={[
@@ -548,13 +550,13 @@ export default function HistoryPage() {
                   <StatCard
                     icon={<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" className="w-3.5 h-3.5"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3" strokeLinecap="round"/></svg>}
                     label="Avg Speed"
-                    value={fmt(selectedRideDetail.avgSpeed, 1)}
+                    value={fmt(selectedRideDetail.avg_speed, 1)}
                     unit="km/h"
                   />
                   <StatCard
                     icon={<svg viewBox="0 0 24 24" fill="none" stroke="#a855f7" strokeWidth="2" className="w-3.5 h-3.5"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" strokeLinecap="round"/></svg>}
                     label="Max Speed"
-                    value={fmt(selectedRideDetail.maxSpeed, 1)}
+                    value={fmt(selectedRideDetail.max_speed, 1)}
                     unit="km/h"
                   />
                   <StatCard

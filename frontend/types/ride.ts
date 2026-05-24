@@ -14,22 +14,27 @@ export interface Coordinate {
  
 export interface RidePoint extends Coordinate {
   speed: number;
-  timestamp: number; // ms epoch
+  timestamp: number; 
 }
  
 export interface RideStats {
-  distance: number;    // km
-  duration: number;    // detik
-  avgSpeed: number;    // km/h
-  maxSpeed: number;    // km/h
-  calories: number;    // kkal
+  distance: number;    
+  duration: number;   
+  avgSpeed: number;    
+  maxSpeed: number;    
+  calories: number;    
 }
  
 export interface ActiveRide {
   id: number;
   mode: RideMode;
   status: string;
-  startedAt: string;
+  distance: number;
+  duration: number;
+  avg_speed: number;
+  max_speed: number;
+  calories: number;
+  started_at: string;
 }
  
 export interface RideHistoryItem {
@@ -38,23 +43,23 @@ export interface RideHistoryItem {
   status: string;
   distance: number;
   duration: number;
-  avgSpeed: number;
-  maxSpeed: number;
+  avg_speed: number;
+  max_speed: number;
   calories: number;
-  startedAt: string;
-  endedAt: string;
+  started_at: string;
+  ended_at: string | null;
 }
  
 export interface RideDetail extends RideHistoryItem {
-  startLat: number | null;
-  startLng: number | null;
-  endLat: number | null;
-  endLng: number | null;
+  start_lat: number | null;
+  start_lng: number | null;
+  end_lat: number | null;
+  end_lng: number | null;
   locations: Array<{
     lat: number;
     lng: number;
     speed: number;
-    recordedAt: string;
+    recorded_at: string;
   }>;
   alerts: Array<{
     id: number;
@@ -65,8 +70,8 @@ export interface RideDetail extends RideHistoryItem {
  
 export interface RouteInfo {
   coordinates: Coordinate[];
-  distance: number;    // km
-  duration: number;    // menit
+  distance: number;   
+  duration: number;    
   instructions: RouteInstruction[];
 }
  

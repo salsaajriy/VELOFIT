@@ -59,8 +59,8 @@ export default function RideDetailPage() {
         <p className="font-semibold text-gray-700 mb-2">📊 Statistik</p>
         <StatRow label="Jarak"            value={`${ride.distance.toFixed(2)} km`} />
         <StatRow label="Durasi"           value={`${durationMin} menit`} />
-        <StatRow label="Kecepatan Rata-rata" value={`${ride.avgSpeed.toFixed(1)} km/h`} />
-        <StatRow label="Kecepatan Maks."  value={`${ride.maxSpeed.toFixed(1)} km/h`} />
+        <StatRow label="Kecepatan Rata-rata" value={`${ride.avg_speed.toFixed(1)} km/h`} />
+        <StatRow label="Kecepatan Maks."  value={`${ride.max_speed.toFixed(1)} km/h`} />
         <StatRow label="Kalori Terbakar"  value={`${ride.calories.toFixed(0)} kkal`} />
         <StatRow label="Mode"             value={ride.mode === 'free' ? 'Free Ride' : 'Navigasi'} />
       </div>

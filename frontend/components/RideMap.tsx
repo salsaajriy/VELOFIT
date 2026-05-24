@@ -5,7 +5,6 @@ import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet
 import L from 'leaflet';
 import type { Coordinate } from '@/types/ride';
 
-// ── Custom Icons ──────────────────────────────────────────────
 const startIcon = new L.Icon({
   iconUrl: 'data:image/svg+xml;base64,' + btoa(`
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="32" height="32">
@@ -72,7 +71,6 @@ function MapFitBounds({ trail }: { trail: Array<[number, number]> }) {
   return null;
 }
 
-// ── Props Interface ───────────────────────────────────────────
 interface RideMapProps {
   trail?:         Array<[number, number]>;  // Make optional with default
   currentPos?:    { lat: number; lng: number } | null;
@@ -84,18 +82,16 @@ interface RideMapProps {
   className?:     string;
 }
 
-// ── Main Component (memoized) ─────────────────────────────────
 const RideMap = memo(function RideMap({
-  trail = [],           // Default to empty array
+  trail = [],          
   currentPos,
   routeCoords,
-  coords,              // Support alternative prop name
+  coords,             
   mode,
-  center = [1.1301, 104.0529], // Batam default
+  center = [1.1301, 104.0529], 
   height = '400px',
   className = '',
 }: RideMapProps) {
-  // Use coords if trail is empty and coords is provided
   const effectiveTrail = trail && trail.length > 0 ? trail : (coords || []);
   
   const livePos: [number, number] | null = currentPos

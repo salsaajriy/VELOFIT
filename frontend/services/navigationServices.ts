@@ -3,8 +3,8 @@ const ORS_URL = 'https://api.openrouteservice.org/v2/directions/cycling-regular'
  
 export interface NavigationResult {
   coordinates: Array<[number, number]>; // [lat, lng]
-  distance:    number;    // km
-  duration:    number;    // menit
+  distance:    number;    
+  duration:    number;    
   instructions: Array<{
     distance:    number;
     duration:    number;
@@ -40,9 +40,8 @@ export async function getRoute(
   const data = await res.json();
   const route = data.routes[0];
  
-  // Decode geometry (encoded polyline atau array koordinat)
   const coords: Array<[number, number]> = route.geometry.coordinates.map(
-    ([lng, lat]: [number, number]) => [lat, lng] // konversi ke [lat, lng]
+    ([lng, lat]: [number, number]) => [lat, lng] 
   );
  
   const steps = route.segments[0].steps.map((s: unknown) => ({
@@ -54,8 +53,8 @@ export async function getRoute(
  
   return {
     coordinates: coords,
-    distance:    Math.round(route.summary.distance / 10) / 100, // → km
-    duration:    Math.round(route.summary.duration / 60),       // → menit
+    distance:    Math.round(route.summary.distance / 10) / 100, 
+    duration:    Math.round(route.summary.duration / 60),      
     instructions: steps,
   };
 }
