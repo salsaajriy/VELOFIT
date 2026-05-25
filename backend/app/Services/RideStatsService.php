@@ -21,10 +21,15 @@ class RideStatsService
     public function calculateCalories(
         float $durationSeconds,
         float $weightKg,
-        float $avgSpeed
-    ): float {
+        float $avgSpeed,
+        float $distanceKm
+    ): float
+    {
+        if ($distanceKm <= 0.01) {
+            return 0;
+        }
+        
         $met = $this->getMetBySpeed($avgSpeed);
-
         $hours = $durationSeconds / 3600;
 
         return round(

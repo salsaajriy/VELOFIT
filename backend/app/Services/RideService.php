@@ -106,16 +106,18 @@ class RideService
 
         $userWeight = $ride->user->weight;
 
-        $calories = $this->statsService->calculateCalories(
-            durationSeconds: $finalStats['duration'],
-            weightKg: $userWeight,
-            avgSpeed: $finalStats['avg_speed']
-        );
-
         $avgSpeed = $this->statsService->calculateAverageSpeed(
             distanceKm: $finalStats['distance'],
             durationSeconds: $finalStats['duration']
         );
+
+        $calories = $this->statsService->calculateCalories(
+            durationSeconds: $finalStats['duration'],
+            weightKg: $userWeight,
+            avgSpeed: $avgSpeed,
+            distanceKm: $finalStats['distance']
+        );
+
         $ride->update([
             'status'     => 'completed',
             'ended_at'   => now(),

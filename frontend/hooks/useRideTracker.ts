@@ -5,7 +5,7 @@ import { haversineDistance } from '@/lib/haversine';
 import { rideService } from '@/services/rideService';
 import type { RideStatus, RideMode, RidePoint, RideStats, ActiveRide } from '@/types/ride';
  
-const NOISE_THRESHOLD_M    = 3;     
+const NOISE_THRESHOLD_M    = 10;     
 const BATCH_SIZE           = 5;     
 const BATCH_INTERVAL_MS    = 10_000;  
  
@@ -107,51 +107,75 @@ export function useRideTracker(): UseRideTrackerReturn {
   }, [activeRide]);
  
   const handlePosition = useCallback((pos: GeolocationPosition) => {
-    const { latitude, longitude, speed } = pos.coords;
+    const {
+      latitude,
+      longitude,
+      speed,
+      accuracy,
+    } = pos.coords;
+
     const timestamp = pos.timestamp;
-    const speedKmh  = speed ? speed * 3.6 : 0;
- 
+    const speedKmh = speed ? speed * 3.6 : 0;
+
     setCurrentPos({ lat: latitude, lng: longitude });
- 
-    if (lastPointRef.current) {
-      const distM = haversineDistance(
-        lastPointRef.current.lat, lastPointRef.current.lng,
-        latitude, longitude
-      ) * 1000;
- 
-      if (distM < NOISE_THRESHOLD_M) return; 
+
+    if (accuracy && accuracy > 20) {
+      return;
     }
- 
+
     if (lastPointRef.current) {
-      const distKm = haversineDistance(
-        lastPointRef.current.lat, lastPointRef.current.lng,
-        latitude, longitude
-      );
-      totalDistance.current += distKm;
+      const distM =
+        haversineDistance(
+          lastPointRef.current.lat,
+          lastPointRef.current.lng,
+          latitude,
+          longitude
+        ) * 1000;
+
+      if (distM < NOISE_THRESHOLD_M) {
+        return;
+      }
+      if (speedKmh < 1 && distM < 15) {
+        return;
+      }
+      totalDistance.current += distM / 1000;
     }
- 
-    if (speedKmh > maxSpeedRef.current) maxSpeedRef.current = speedKmh;
+
+    if (speedKmh > maxSpeedRef.current) {
+      maxSpeedRef.current = speedKmh;
+    }
+
     speedHistory.current.push(speedKmh);
- 
-    const newPoint: RidePoint = { lat: latitude, lng: longitude, speed: speedKmh, timestamp };
+
+    const newPoint: RidePoint = {
+      lat: latitude,
+      lng: longitude,
+      speed: speedKmh,
+      timestamp,
+    };
+
     lastPointRef.current = newPoint;
     locationBatch.current.push(newPoint);
- 
+
     setTrail((prev) => [...prev, [latitude, longitude]]);
 
-    if (locationBatch.current.length >= BATCH_SIZE) flushBatch();
+    if (locationBatch.current.length >= BATCH_SIZE) {
+      flushBatch();
+    }
 
     setStats((prev) => {
       const avgSpeed =
         speedHistory.current.length > 0
-          ? speedHistory.current.reduce((a, b) => a + b, 0) / speedHistory.current.length
+          ? speedHistory.current.reduce((a, b) => a + b, 0) /
+            speedHistory.current.length
           : 0;
+
       return {
-        distance:  Math.round(totalDistance.current * 1000) / 1000,
-        duration:  prev.duration,
-        avgSpeed:  Math.round(avgSpeed * 10) / 10,
-        maxSpeed:  Math.round(maxSpeedRef.current * 10) / 10,
-        calories:  prev.calories,
+        distance: Math.round(totalDistance.current * 1000) / 1000,
+        duration: prev.duration,
+        avgSpeed: Math.round(avgSpeed * 10) / 10,
+        maxSpeed: Math.round(maxSpeedRef.current * 10) / 10,
+        calories: prev.calories,
       };
     });
   }, [flushBatch]);
@@ -255,6 +279,10 @@ export function useRideTracker(): UseRideTrackerReturn {
       calories:  0,
     };
  
+    console.log('FINAL STATS', finalStats);
+    console.log('TOTAL DISTANCE REF', totalDistance.current);
+    console.log('POINTS', locationBatch.current.length);
+
     const result = await rideService.finishRide(
       activeRide.id,
       finalStats

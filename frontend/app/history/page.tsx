@@ -5,10 +5,7 @@ import dynamic from 'next/dynamic';
 import Sidebar from '@/components/sidebar';
 import { rideService } from '@/services/rideService';
 import type { RideHistoryItem, RideDetail } from '@/types/ride';
-import {
-  Clock, Navigation, Activity, Flame,
-  MapPin, Award, ChevronRight,
-} from 'lucide-react';
+import { Clock, Navigation, Activity, Flame, MapPin, Award, ChevronRight, } from 'lucide-react';
 
 const RideMap = dynamic(() => import('@/components/RideMap'), { ssr: false });
 
@@ -27,10 +24,21 @@ const TIME_FILTERS: Record<string, number> = {
 };
 
 function formatDuration(seconds: number): string {
-  if (!seconds || seconds <= 0) return '0m';
+  if (!seconds || seconds <= 0) return '0s';
+
   const h = Math.floor(seconds / 3600);
   const m = Math.floor((seconds % 3600) / 60);
-  return h > 0 ? `${h}h ${m}m` : `${m}m`;
+  const s = seconds % 60;
+
+  if (h > 0) {
+    return `${h}h ${m}m`;
+  }
+
+  if (m > 0) {
+    return `${m}m`;
+  }
+
+  return `${s}s`;
 }
 
 function formatDate(iso: string): string {
@@ -117,7 +125,6 @@ export default function HistoryPage() {
   const [selectedRideDetail, setSelectedRideDetail] = useState<RideDetail | null>(null);
   const [mapExpanded,        setMapExpanded]        = useState(false);
 
-  // ── Fetch helpers ────────────────────────────────────────────────────
   const fetchHistory = useCallback(async (
     pageNum: number,
     isLoadMore = false,
