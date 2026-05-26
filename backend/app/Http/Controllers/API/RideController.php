@@ -119,6 +119,23 @@ class RideController extends Controller
         ]);
     }
 
+    public function destroy(Request $request, Ride $ride): JsonResponse
+    {
+        if ($ride->user_id !== $request->user()->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized'
+            ], 403);
+        }
+
+        $ride->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Successfully deleted the ride.'
+        ]);
+    }
+
     public function active(Request $request): JsonResponse
     {
         $ride = Ride::query()

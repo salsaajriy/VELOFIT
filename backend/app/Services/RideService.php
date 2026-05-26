@@ -149,6 +149,15 @@ class RideService
             ->first();
     }
 
+    public function deleteRide(int $rideId, int $userId): bool
+    {
+        $ride = Ride::where('id', $rideId)
+            ->where('user_id', $userId)
+            ->firstOrFail();
+
+        return $ride->delete();
+    }
+
     public function getStats(int $userId): array
     {
         $completedRides = Ride::query()

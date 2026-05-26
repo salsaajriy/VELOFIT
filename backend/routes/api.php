@@ -61,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/active',    [RideController::class, 'active']);
         Route::get('/history',   [RideController::class, 'history']);
         Route::get('/stats',     [RideController::class, 'stats']);
+        Route::delete('/{ride}',    [RideController::class, 'destroy']);
     
         Route::post('/{ride}/pause',  [RideController::class, 'pause']);
         Route::post('/{ride}/resume', [RideController::class, 'resume']);

@@ -107,78 +107,102 @@ export function useRideTracker(): UseRideTrackerReturn {
   }, [activeRide]);
  
   const handlePosition = useCallback((pos: GeolocationPosition) => {
-    const {
-      latitude,
-      longitude,
-      speed,
-      accuracy,
-    } = pos.coords;
+  const {
+    latitude,
+    longitude,
+    speed,
+    accuracy,
+  } = pos.coords;
 
-    const timestamp = pos.timestamp;
-    const speedKmh = speed ? speed * 3.6 : 0;
+  const timestamp = pos.timestamp;
+  const speedKmh = speed ? speed * 3.6 : 0;
 
-    setCurrentPos({ lat: latitude, lng: longitude });
+  setCurrentPos({ lat: latitude, lng: longitude });
 
-    if (accuracy && accuracy > 20) {
-      return;
-    }
-
-    if (lastPointRef.current) {
-      const distM =
-        haversineDistance(
-          lastPointRef.current.lat,
-          lastPointRef.current.lng,
-          latitude,
-          longitude
-        ) * 1000;
-
-      if (distM < NOISE_THRESHOLD_M) {
-        return;
-      }
-      if (speedKmh < 1 && distM < 15) {
-        return;
-      }
-      totalDistance.current += distM / 1000;
-    }
-
-    if (speedKmh > maxSpeedRef.current) {
-      maxSpeedRef.current = speedKmh;
-    }
-
-    speedHistory.current.push(speedKmh);
-
-    const newPoint: RidePoint = {
+  // ==========================
+  // SIMPAN TITIK PERTAMA DULU
+  // ==========================
+  if (!lastPointRef.current) {
+    const firstPoint: RidePoint = {
       lat: latitude,
       lng: longitude,
       speed: speedKmh,
       timestamp,
     };
 
-    lastPointRef.current = newPoint;
-    locationBatch.current.push(newPoint);
+    lastPointRef.current = firstPoint;
+    locationBatch.current.push(firstPoint);
 
-    setTrail((prev) => [...prev, [latitude, longitude]]);
+    setTrail([[latitude, longitude]]);
 
-    if (locationBatch.current.length >= BATCH_SIZE) {
-      flushBatch();
-    }
+    speedHistory.current.push(speedKmh);
 
-    setStats((prev) => {
-      const avgSpeed =
-        speedHistory.current.length > 0
-          ? speedHistory.current.reduce((a, b) => a + b, 0) /
-            speedHistory.current.length
-          : 0;
+    return;
+  }
 
-      return {
-        distance: Math.round(totalDistance.current * 1000) / 1000,
-        duration: prev.duration,
-        avgSpeed: Math.round(avgSpeed * 10) / 10,
-        maxSpeed: Math.round(maxSpeedRef.current * 10) / 10,
-        calories: prev.calories,
-      };
-    });
-  }, [flushBatch]);
+  // ==========================
+  // FILTER GPS
+  // ==========================
+  if (accuracy > 20) {
+    return;
+  }
+
+  const distM =
+    haversineDistance(
+      lastPointRef.current.lat,
+      lastPointRef.current.lng,
+      latitude,
+      longitude
+    ) * 1000;
+
+  if (distM < NOISE_THRESHOLD_M) {
+    return;
+  }
+
+  if (speedKmh < 1 && distM < 15) {
+    return;
+  }
+
+  totalDistance.current += distM / 1000;
+
+  if (speedKmh > maxSpeedRef.current) {
+    maxSpeedRef.current = speedKmh;
+  }
+
+  speedHistory.current.push(speedKmh);
+
+  const newPoint: RidePoint = {
+    lat: latitude,
+    lng: longitude,
+    speed: speedKmh,
+    timestamp,
+  };
+
+  lastPointRef.current = newPoint;
+  locationBatch.current.push(newPoint);
+
+  setTrail((prev) => [...prev, [latitude, longitude]]);
+
+  if (locationBatch.current.length >= BATCH_SIZE) {
+    flushBatch();
+  }
+
+  setStats((prev) => {
+    const avgSpeed =
+      speedHistory.current.length > 0
+        ? speedHistory.current.reduce((a, b) => a + b, 0) /
+          speedHistory.current.length
+        : 0;
+
+    return {
+      distance: Math.round(totalDistance.current * 1000) / 1000,
+      duration: prev.duration,
+      avgSpeed: Math.round(avgSpeed * 10) / 10,
+      maxSpeed: Math.round(maxSpeedRef.current * 10) / 10,
+      calories: prev.calories,
+    };
+  });
+}, [flushBatch]);
  
   const handleGpsError = useCallback((err: GeolocationPositionError) => {
     setError(`GPS Error: ${err.message}`);

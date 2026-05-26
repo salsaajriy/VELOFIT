@@ -5,7 +5,7 @@ import dynamic from 'next/dynamic';
 import Sidebar from '@/components/sidebar';
 import { rideService } from '@/services/rideService';
 import type { RideHistoryItem, RideDetail } from '@/types/ride';
-import { Clock, Navigation, Activity, Flame, MapPin, Award, ChevronRight, } from 'lucide-react';
+import { Clock, Navigation, Activity, Flame, MapPin, Award, ChevronRight, Trash } from 'lucide-react';
 
 const RideMap = dynamic(() => import('@/components/RideMap'), { ssr: false });
 
@@ -59,8 +59,6 @@ function getModeDisplay(mode: string) {
     : { label: 'Free Ride',  icon: <Activity   className="w-3.5 h-3.5" />, color: 'text-gray-500'   };
 }
 
-// ── Skeleton ──────────────────────────────────────────────────────────────
-
 function SkeletonRow() {
   return (
     <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center px-5 py-4
@@ -76,8 +74,6 @@ function SkeletonRow() {
     </div>
   );
 }
-
-// ── StatCard (detail panel) ───────────────────────────────────────────────
 
 function StatCard({
   icon, label, value, unit, colSpan = 1,
@@ -104,10 +100,7 @@ function StatCard({
   );
 }
 
-// ── Page ──────────────────────────────────────────────────────────────────
-
 export default function HistoryPage() {
-  // ── State ────────────────────────────────────────────────────────────
   const [rides,        setRides]        = useState<RideHistoryItem[]>([]);
   const [isLoading,    setIsLoading]    = useState(true);
   const [loadingMore,  setLoadingMore]  = useState(false);
@@ -145,7 +138,6 @@ export default function HistoryPage() {
         setHasMore(newRides.length === 15);
       }
 
-      // Auto-select pertama saat load awal
       if (pageNum === 1 && newRides.length > 0) {
         setSelectedRide(newRides[0]);
         fetchDetail(newRides[0].id);
@@ -173,10 +165,38 @@ export default function HistoryPage() {
 
   useEffect(() => { fetchHistory(1); }, [fetchHistory]);
 
-  // ── Handlers ─────────────────────────────────────────────────────────
   const handleSelect = (ride: RideHistoryItem) => {
     setSelectedRide(ride);
     fetchDetail(ride.id);
+  };
+
+  const handleDeleteRide = async (rideId: number) => {
+    const firstConfirm = window.confirm(
+      'Are you sure you want to delete this trip? This action cannot be undone.'
+    );
+
+    if (!firstConfirm) return;
+
+    const secondConfirm = window.confirm(
+      'Data ride will be removed from history. Continue?'
+    );
+
+    if (!secondConfirm) return;
+
+    try {
+      await rideService.deleteRide(rideId);
+
+      setRides((prev) =>
+        prev.filter((ride) => ride.id !== rideId)
+      );
+
+      if (selectedRide?.id === rideId) {
+        setSelectedRide(null);
+        setSelectedRideDetail(null);
+      }
+    } catch {
+      alert('Failed to delete the ride. Please try again.');
+    }
   };
 
   const handleLoadMore = () => {
@@ -187,7 +207,6 @@ export default function HistoryPage() {
     }
   };
 
-  // ── Filter ───────────────────────────────────────────────────────────
   const filterDays = TIME_FILTERS[timeFilter] ?? 30;
   const cutoff = filterDays === Infinity
     ? null
@@ -220,8 +239,6 @@ export default function HistoryPage() {
       <Sidebar />
 
       <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 flex flex-col overflow-hidden">
-
-        {/* Header */}
         <div className="px-8 pt-8 pb-4">
           <div className="flex items-center justify-between">
             <div>
@@ -339,14 +356,10 @@ export default function HistoryPage() {
           </div>
         )}
 
-        {/* Content */}
         <div className="flex flex-1 gap-5 px-8 pb-8 overflow-hidden min-h-0">
-
           {/* ── Ride list ────────────────────────────────────────── */}
           <div className="flex-1 bg-white rounded-2xl border border-gray-100 shadow-sm
                           overflow-hidden flex flex-col min-w-0">
-
-            {/* Table header */}
             <div className="grid grid-cols-[2fr_1fr_1fr_1fr_auto] px-5 py-3
                             border-b border-gray-100 bg-gray-50/80">
               {['DATE & MODE', 'DISTANCE', 'DURATION', 'STATUS', ''].map(h => (
@@ -430,7 +443,19 @@ export default function HistoryPage() {
                           {statusInfo.label}
                         </span>
 
-                        <ChevronRight className="w-4 h-4 text-gray-300" />
+                        <div className="flex items-center gap-2">
+                          <span
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteRide(ride.id);
+                            }}
+                            className="text-red-500 hover:text-red-700"
+                          >
+                            <Trash className="w-4 h-4" />
+                          </span>
+
+                          <ChevronRight className="w-4 h-4 text-gray-300" />
+                        </div>
                       </button>
                     );
                   })}
@@ -449,7 +474,7 @@ export default function HistoryPage() {
                           <span className="flex items-center justify-center gap-2">
                             <span className="w-4 h-4 border-2 border-white border-t-transparent
                                              rounded-full animate-spin" />
-                            Memuat…
+                            Loading…
                           </span>
                         ) : 'Muat Lebih Banyak'}
                       </button>
@@ -468,9 +493,7 @@ export default function HistoryPage() {
             </div>
           </div>
 
-          {/* ── Detail Panel ─────────────────────────────────────── */}
           <div className="w-80 shrink-0 flex flex-col gap-4">
-
             {/* Map Card */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">

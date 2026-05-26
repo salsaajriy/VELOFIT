@@ -66,6 +66,11 @@ export const rideService = {
     return data.data;
   },
 
+  async deleteRide(id: number) {
+    const response = await api.delete(`/rides/${id}`);
+    return response.data;
+  },
+
   async getActiveRide(): Promise<ActiveRide | null> {
     const { data } = await api.get('/rides/active');
     return data.data;
