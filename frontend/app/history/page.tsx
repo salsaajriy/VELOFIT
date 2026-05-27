@@ -118,6 +118,36 @@ export default function HistoryPage() {
   const [selectedRideDetail, setSelectedRideDetail] = useState<RideDetail | null>(null);
   const [mapExpanded,        setMapExpanded]        = useState(false);
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [rideToDelete, setRideToDelete] = useState<number | null>(null);
+
+  const openDeleteModal = (rideId: number) => {
+    setRideToDelete(rideId);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteRide = async () => {
+    if (!rideToDelete) return;
+
+    try {
+      await rideService.deleteRide(rideToDelete);
+
+      setRides((prev) =>
+        prev.filter((r) => r.id !== rideToDelete)
+      );
+
+      if (selectedRide?.id === rideToDelete) {
+        setSelectedRide(null);
+        setSelectedRideDetail(null);
+      }
+
+      setShowDeleteModal(false);
+      setRideToDelete(null);
+    } catch {
+      alert('Failed to delete the ride. Please try again.');
+    }
+  };
+
   const fetchHistory = useCallback(async (
     pageNum: number,
     isLoadMore = false,
@@ -168,35 +198,6 @@ export default function HistoryPage() {
   const handleSelect = (ride: RideHistoryItem) => {
     setSelectedRide(ride);
     fetchDetail(ride.id);
-  };
-
-  const handleDeleteRide = async (rideId: number) => {
-    const firstConfirm = window.confirm(
-      'Are you sure you want to delete this trip? This action cannot be undone.'
-    );
-
-    if (!firstConfirm) return;
-
-    const secondConfirm = window.confirm(
-      'Data ride will be removed from history. Continue?'
-    );
-
-    if (!secondConfirm) return;
-
-    try {
-      await rideService.deleteRide(rideId);
-
-      setRides((prev) =>
-        prev.filter((ride) => ride.id !== rideId)
-      );
-
-      if (selectedRide?.id === rideId) {
-        setSelectedRide(null);
-        setSelectedRideDetail(null);
-      }
-    } catch {
-      alert('Failed to delete the ride. Please try again.');
-    }
   };
 
   const handleLoadMore = () => {
@@ -397,9 +398,11 @@ export default function HistoryPage() {
                       STATUS_CONFIG[ride.status?.toLowerCase()] ?? STATUS_CONFIG.completed;
 
                     return (
-                      <button
+                      <div
                         key={ride.id}
                         onClick={() => handleSelect(ride)}
+                        role="button"
+                        tabIndex={0}
                         className={[
                           'w-full grid grid-cols-[2fr_1fr_1fr_1fr_auto] items-center',
                           'px-5 py-4 border-b border-gray-50 text-left transition-colors',
@@ -424,43 +427,33 @@ export default function HistoryPage() {
                             </p>
                           </div>
                         </div>
-
-                        {/* Distance */}
                         <span className="text-sm font-semibold text-gray-700">
                           {fmt(ride.distance, 1)} km
                         </span>
-
-                        {/* Duration */}
                         <span className="text-sm text-gray-600">
                           {formatDuration(ride.duration)}
                         </span>
-
-                        {/* Status */}
                         <span className={[
                           'inline-flex w-fit px-2.5 py-1 rounded-full text-xs font-bold',
                           statusInfo.bg, statusInfo.text,
                         ].join(' ')}>
                           {statusInfo.label}
                         </span>
-
                         <div className="flex items-center gap-2">
                           <span
                             onClick={(e) => {
                               e.stopPropagation();
-                              handleDeleteRide(ride.id);
+                              openDeleteModal(ride.id);
                             }}
-                            className="text-red-500 hover:text-red-700"
-                          >
+                            className="text-red-500 hover:text-red-700 p-2 rounded-lg hover:bg-red-50 transition cursor-pointer">
                             <Trash className="w-4 h-4" />
                           </span>
-
                           <ChevronRight className="w-4 h-4 text-gray-300" />
                         </div>
-                      </button>
+                      </div>
                     );
                   })}
 
-                  {/* Load More */}
                   {hasMore && (
                     <div className="p-4">
                       <button
@@ -494,7 +487,6 @@ export default function HistoryPage() {
           </div>
 
           <div className="w-80 shrink-0 flex flex-col gap-4">
-            {/* Map Card */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                 <span className="text-sm font-black text-gray-800">Route View</span>
@@ -536,10 +528,8 @@ export default function HistoryPage() {
               </div>
             </div>
 
-            {/* Detail Card */}
             {selectedRideDetail ? (
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-                {/* Title */}
                 <div className="flex items-start justify-between gap-2 mb-4">
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
@@ -564,7 +554,6 @@ export default function HistoryPage() {
                   </span>
                 </div>
 
-                {/* Stats grid */}
                 <div className="grid grid-cols-2 gap-3">
                   <StatCard
                     icon={<svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" className="w-3.5 h-3.5"><path d="M3 3v18h18" strokeLinecap="round"/><path d="M7 16l4-8 4 4 4-6" strokeLinecap="round" strokeLinejoin="round"/></svg>}
@@ -598,7 +587,6 @@ export default function HistoryPage() {
                   />
                 </div>
 
-                {/* Alerts */}
                 {selectedRideDetail.alerts?.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-gray-100">
                     <p className="text-xs font-bold text-gray-500 mb-2">⚠️ Alerts</p>
@@ -624,6 +612,44 @@ export default function HistoryPage() {
             )}
           </div>
         </div>
+        
+        {showDeleteModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-xs">
+
+            <div className="w-full max-w-sm bg-white rounded-lg p-6 shadow-2xl animate-in fade-in zoom-in-95">
+              <h2 className="text-xl font-black text-gray-900 mb-2">
+                Delete Activity
+              </h2>
+              <p className="text-sm text-gray-500 leading-relaxed mb-6">
+                This ride history will be removed from your account.
+                This action cannot be undone.
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    setShowDeleteModal(false);
+                    setRideToDelete(null);
+                  }}
+                  className="flex-1 py-3 rounded-xs border border-gray-200
+                            text-gray-700 font-semibold hover:bg-gray-50 transition"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={confirmDeleteRide}
+                  className="flex-1 py-3 rounded-xs bg-red-500
+                            hover:bg-red-600 text-white font-semibold transition"
+                >
+                  Delete
+                </button>
+
+              </div>
+
+            </div>
+
+          </div>
+        )}
       </main>
     </div>
   );
