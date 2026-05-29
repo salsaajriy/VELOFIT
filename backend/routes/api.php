@@ -70,5 +70,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/{ride}',         [RideController::class, 'show']);
     });
 
+    Route::get('/goals/progress', [GoalController::class, 'progress']);
+    
     Route::apiResource('goals', GoalController::class);
 });

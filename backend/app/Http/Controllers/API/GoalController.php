@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Goal;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreGoalRequest;
 use App\Http\Requests\UpdateGoalRequest;
-use App\Models\Goal;
+use App\Services\Goals\GoalProgressService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -71,6 +72,19 @@ class GoalController extends Controller
 
         return response()->json([
             'message' => 'Goal deleted successfully',
+        ]);
+    }
+
+    public function progress(
+        Request $request,
+        GoalProgressService $goalProgressService,
+    ): JsonResponse {
+
+        $progress = $goalProgressService
+            ->getUserProgress($request->user());
+
+        return response()->json([
+            'data' => $progress,
         ]);
     }
 }
