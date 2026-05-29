@@ -8,6 +8,7 @@ use App\Http\Controllers\API\ProfileController;
 use App\Http\Controllers\API\HelmetController;
 use App\Http\Controllers\API\RideController;
 use App\Http\Controllers\API\IoTController;
+use App\Http\Controllers\API\GoalController;
 
 //------------------------------------------------------------------
 // PUBLIC ROUTES (tidak perlu token)
@@ -68,4 +69,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{ride}/finish', [RideController::class, 'finish']);
         Route::get('/{ride}',         [RideController::class, 'show']);
     });
+
+    Route::apiResource('goals', GoalController::class);
 });
