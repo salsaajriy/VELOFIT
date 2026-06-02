@@ -13,12 +13,16 @@ return new class extends Migration {
                   ->constrained()
                   ->cascadeOnDelete();
             $table->string('mode')->default('free');
+            $table->string('navigation_result')->nullable();
             $table->decimal('distance', 10, 3)->default(0); 
             $table->unsignedInteger('duration')->default(0); 
             $table->decimal('avg_speed', 6, 2)->default(0);   
             $table->decimal('max_speed', 6, 2)->default(0);   
             $table->decimal('calories', 8, 2)->default(0);    
             $table->string('status')->default('active');
+
+            $table->decimal('destination_lat', 10, 7)->nullable();
+            $table->decimal('destination_lng', 10, 7)->nullable();
 
             $table->decimal('start_lat', 10, 7)->nullable();
             $table->decimal('start_lng', 10, 7)->nullable();

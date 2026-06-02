@@ -12,25 +12,22 @@ class Ride extends Model
     protected $fillable = [
         'user_id',
         'mode',
-
+        'navigation_result',
         'distance',
         'duration',
-
         'avg_speed',
         'max_speed',
         'calories',
-
         'status',
-
+        'destination_lat',
+        'destination_lng',
         'start_lat',
         'start_lng',
         'end_lat',
         'end_lng',
-
         'started_at',
         'paused_at',
         'ended_at',
-
         'route_name',
         'source',
         'auto_paused_count',
@@ -43,6 +40,8 @@ class Ride extends Model
         'avg_speed'  => 'float',
         'max_speed'  => 'float',
         'calories'   => 'float',
+        'destination_lat' => 'float',
+        'destination_lng' => 'float',
         'start_lat'  => 'float',
         'start_lng'  => 'float',
         'end_lat'    => 'float',

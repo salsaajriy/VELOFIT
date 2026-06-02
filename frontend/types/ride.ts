@@ -41,6 +41,7 @@ export interface RideHistoryItem {
   id: number;
   mode: RideMode;
   status: string;
+  navigation_result: string | null;
   distance: number;
   duration: number;
   avg_speed: number;
@@ -80,4 +81,11 @@ export interface RouteInstruction {
   duration: number;
   instruction: string;
   type: number;
+}
+
+export interface Destination {
+  name: string;
+  lat: number;
+  lon: number;
+  display_name: string;
 }

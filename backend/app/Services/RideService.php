@@ -12,11 +12,44 @@ use Illuminate\Validation\ValidationException;
  
 class RideService
 {
+    private function calculateDistanceMeters(
+        float $lat1,
+        float $lng1,
+        float $lat2,
+        float $lng2
+    ): float
+    {
+        $earthRadius = 6371000;
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+
+        $a =
+            sin($dLat / 2) * sin($dLat / 2) +
+            cos(deg2rad($lat1)) *
+            cos(deg2rad($lat2)) *
+            sin($dLng / 2) *
+            sin($dLng / 2);
+
+        $c = 2 * atan2(
+            sqrt($a),
+            sqrt(1 - $a)
+        );
+
+        return $earthRadius * $c;
+    }
+
     public function __construct(
         private readonly RideStatsService $statsService
     ) {}
  
-    public function startRide(int $userId, string $mode = 'free', ?string $routeName = null): Ride
+    public function startRide(
+        int $userId, 
+        string $mode = 'free', 
+        ?string $routeName = null,
+        ?string $destinationLat = null,
+        ?string $destinationLng = null
+        ): Ride
     {
         $activeRide = Ride::where('user_id', $userId)
             ->active()
@@ -44,6 +77,8 @@ class RideService
             'status'     => 'active',
             'started_at' => now(),
             'route_name' => $routeName,
+            'destination_lat' => $destinationLat,
+            'destination_lng' => $destinationLng,
         ]);
     }
  
@@ -118,8 +153,30 @@ class RideService
             distanceKm: $finalStats['distance']
         );
 
+        $navigationResult = null;
+        if (
+            $ride->mode === 'navigation' &&
+            $ride->destination_lat &&
+            $ride->destination_lng &&
+            $lastLocation
+        ) {
+            $distanceToDestination =
+                $this->calculateDistanceMeters(
+                    $lastLocation->latitude,
+                    $lastLocation->longitude,
+                    $ride->destination_lat,
+                    $ride->destination_lng
+                );
+
+            $navigationResult =
+                $distanceToDestination <= 30
+                    ? 'completed'
+                    : 'uncompleted';
+        }
+
         $ride->update([
             'status'     => 'completed',
+            'navigation_result' => $navigationResult,
             'ended_at'   => now(),
             'distance'   => $finalStats['distance'],
             'duration'   => $finalStats['duration'],

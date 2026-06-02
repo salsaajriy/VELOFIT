@@ -5,7 +5,7 @@ import { haversineDistance } from '@/lib/haversine';
 import { rideService } from '@/services/rideService';
 import type { RideStatus, RideMode, RidePoint, RideStats, ActiveRide } from '@/types/ride';
  
-const NOISE_THRESHOLD_M    = 10;     
+const NOISE_THRESHOLD_M    = 2;     
 const BATCH_SIZE           = 5;     
 const BATCH_INTERVAL_MS    = 10_000;  
  
@@ -116,12 +116,16 @@ export function useRideTracker(): UseRideTrackerReturn {
 
   const timestamp = pos.timestamp;
   const speedKmh = speed ? speed * 3.6 : 0;
+    
+  console.log(
+      latitude,
+      longitude,
+      accuracy,
+      timestamp
+    );
 
   setCurrentPos({ lat: latitude, lng: longitude });
 
-  // ==========================
-  // SIMPAN TITIK PERTAMA DULU
-  // ==========================
   if (!lastPointRef.current) {
     const firstPoint: RidePoint = {
       lat: latitude,
@@ -130,6 +134,10 @@ export function useRideTracker(): UseRideTrackerReturn {
       timestamp,
     };
 
+        console.log(
+        'GPS ACCEPTED', latitude, longitude, accuracy
+    );
+
     lastPointRef.current = firstPoint;
     locationBatch.current.push(firstPoint);
 
@@ -137,13 +145,17 @@ export function useRideTracker(): UseRideTrackerReturn {
 
     speedHistory.current.push(speedKmh);
 
+    console.log({
+      lat: latitude,
+      lng: longitude,
+      accuracy,
+      speedKmh,
+    });
+    
     return;
   }
 
-  // ==========================
-  // FILTER GPS
-  // ==========================
-  if (accuracy > 20) {
+  if (accuracy > 500) {
     return;
   }
 
@@ -159,9 +171,9 @@ export function useRideTracker(): UseRideTrackerReturn {
     return;
   }
 
-  if (speedKmh < 1 && distM < 15) {
-    return;
-  }
+  // if (speedKmh < 1 && distM < 15) {
+  //   return;
+  // }
 
   totalDistance.current += distM / 1000;
 

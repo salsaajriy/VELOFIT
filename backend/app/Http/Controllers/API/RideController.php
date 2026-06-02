@@ -18,7 +18,9 @@ class RideController extends Controller
         $ride = $this->rideService->startRide(
             userId: $request->user()->id,
             mode: $request->input('mode', 'free'),
-            routeName: $request->input('route_name')
+            routeName: $request->input('route_name'),
+            destinationLat: $request->input('destination_lat'),
+            destinationLng: $request->input('destination_lng'),
         );
  
         return response()->json([

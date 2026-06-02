@@ -63,7 +63,6 @@ export default function RidePage() {
     setMode(newMode);
   };
 
-  // Format elapsed time for display
   const formatElapsedTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -152,10 +151,10 @@ export default function RidePage() {
             {isIdle && (
               <div className="bg-linear-to-r from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
                 <h2 className="text-2xl font-bold mb-2">
-                  Siap Bersepeda?
+                  Ready to Cycle?
                 </h2>
                 <p className="text-orange-100 text-sm">
-                  Pilih mode perjalanan dan mulai tracking aktivitas bersepeda Anda
+                  Choose a travel mode and start tracking your cycling activities
                 </p>
               </div>
             )}
@@ -195,12 +194,12 @@ export default function RidePage() {
                     <Award className="w-5 h-5 text-orange-500 shrink-0 mt-0.5" />
                     <div>
                       <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                        Tips Keselamatan
+                        Safety Tips
                       </h4>
                       <ul className="text-xs text-gray-600 space-y-1">
-                        <li>• Gunakan helm dan perlengkapan safety</li>
-                        <li>• Pastikan GPS menyala dengan baik</li>
-                        <li>• Patuhi rambu lalu lintas</li>
+                        <li>• Use a helmet and safety gear</li>
+                        <li>• Ensure GPS is functioning properly</li>
+                        <li>• Follow traffic signs and regulations</li>
                       </ul>
                     </div>
                   </div>
@@ -210,12 +209,12 @@ export default function RidePage() {
                     <TrendingUp className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
                     <div>
                       <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                        Tips Performa
+                        Performance Tips
                       </h4>
                       <ul className="text-xs text-gray-600 space-y-1">
-                        <li>• Jaga kecepatan konsisten 20-25 km/jam</li>
-                        <li>• Istirahat setiap 1 jam perjalanan</li>
-                        <li>• Minum air secara teratur</li>
+                        <li>• Maintain consistent speed of 20-25 km/h</li>
+                        <li>• Take breaks every 1 hour of travel</li>
+                        <li>• Stay hydrated throughout the ride</li>
                       </ul>
                     </div>
                   </div>
@@ -231,7 +230,7 @@ export default function RidePage() {
               <div className="bg-white rounded-2xl shadow-lg border border-orange-100 p-5">
                 <h3 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
                   <TrendingUp className="w-5 h-5 text-orange-500" />
-                  Pilih Mode Perjalanan
+                  Choose Travel Mode
                 </h3>
                 <div className="space-y-3">
                   {(['free', 'navigation'] as const).map((m) => (
@@ -263,8 +262,8 @@ export default function RidePage() {
                             </p>
                             <p className="text-xs text-gray-500 mt-0.5">
                               {m === 'free' 
-                                ? 'Bersepeda bebas tanpa rute yang ditentukan' 
-                                : 'Ikuti panduan rute yang sudah ditentukan'}
+                                ? 'Cycling freely without a designed route' 
+                                : 'Follow the pre-defined route guidelines'}
                             </p>
                           </div>
                         </div>
@@ -286,7 +285,7 @@ export default function RidePage() {
                 <div className="bg-linear-to-r from-orange-500 to-orange-600 px-5 py-3">
                   <h3 className="text-white font-semibold text-sm flex items-center gap-2">
                     <TrendingUp className="w-4 h-4" />
-                    Statistik Perjalanan
+                    Travel Statistics
                   </h3>
                 </div>
                 <div className="p-5">
@@ -299,7 +298,7 @@ export default function RidePage() {
             <div className="bg-white rounded-2xl shadow-lg border border-orange-100 p-5">
               <h3 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
                 <Bike className="w-5 h-5 text-orange-500" />
-                Kontrol Perjalanan
+                Travel Controls
               </h3>
               <RideControls
                 status={status}
@@ -316,7 +315,7 @@ export default function RidePage() {
               <div className="lg:hidden bg-white rounded-2xl shadow-lg border border-orange-100 p-5">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                   <Clock className="w-4 h-4 text-orange-500" />
-                  Ringkasan Cepat
+                  Quick Summary
                 </h3>
                 <div className="grid grid-cols-3 gap-3">
                   <div className="text-center">

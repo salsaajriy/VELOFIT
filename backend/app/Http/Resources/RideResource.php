@@ -11,6 +11,7 @@ class RideResource extends JsonResource
         return [
             'id' => $this->id,
             'mode' => $this->mode,
+            'navigation_result' => $this->navigation_result,
             'route_name' => $this->route_name,
             'status' => $this->status,
             'distance' => round($this->distance, 3),
@@ -18,6 +19,8 @@ class RideResource extends JsonResource
             'avg_speed' => round($this->avg_speed, 2),
             'max_speed' => round($this->max_speed, 2),
             'calories' => round($this->calories, 1),
+            'destination_lat' => $this->destination_lat,
+            'destination_lng' => $this->destination_lng,
             'start_lat' => $this->start_lat,
             'start_lng' => $this->start_lng,
             'end_lat' => $this->end_lat,

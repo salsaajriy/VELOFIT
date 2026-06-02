@@ -44,12 +44,12 @@ export function RideControls({
         {isStarting ? (
           <>
             <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            <span>Memulai...</span>
+            <span>Loading...</span>
           </>
         ) : (
           <>
             <Bike className="w-5 h-5" />
-            <span>Mulai Bersepeda</span>
+            <span>Start Cycling</span>
           </>
         )}
       </button>

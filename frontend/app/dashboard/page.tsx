@@ -28,12 +28,9 @@ export default function DashboardPage() {
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
-
-      {/* Desktop offset + mobile top-bar offset */}
       <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 p-6 lg:p-8 overflow-y-auto">
         <h1 className="text-3xl font-black text-gray-900 my-6">Dashboard</h1>
 
-        {/* Hero Banner */}
         <div className="relative rounded-2xl overflow-hidden mb-6 h-52 bg-gray-100">
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -58,13 +55,12 @@ export default function DashboardPage() {
                 <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
                   <polygon points="5,3 19,12 5,21" />
                 </svg>
-                Start Ride
+                Start Cycling
               </button>
             </div>
           </div>
         </div>
 
-        {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
           {[
             {
@@ -117,7 +113,6 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Middle Row */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
           {/* Body Temperature */}
           <div className="bg-white rounded-2xl p-5 border-2 border-red-100 shadow-sm">
@@ -156,8 +151,7 @@ export default function DashboardPage() {
               <span className="text-sm font-black text-gray-800 tracking-wide">INACTIVE / SAFE</span>
             </div>
           </div>
-
-          {/* Weekly Target */}
+ 
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
             <p className="text-sm font-bold text-gray-800 mb-0.5">Weekly Target</p>
             <p className="text-xs text-gray-400 mb-4">Progress towards 150km goal</p>
