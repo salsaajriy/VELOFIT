@@ -114,7 +114,7 @@ export default function RidePage() {
                   status === 'tracking' ? 'bg-green-500 animate-pulse' : 'bg-yellow-500'
                 }`} />
                 <span className="hidden sm:inline">
-                  {status === 'tracking' ? 'Sedang Bersepeda' : 'Berhenti Sebentar'}
+                  {status === 'tracking' ? 'Cycling' : 'Paused'}
                 </span>
                 <span className="sm:hidden">
                   {status === 'tracking' ? 'Active' : 'Paused'}
@@ -225,60 +225,6 @@ export default function RidePage() {
 
           {/* Right Column - Controls and Stats */}
           <div className="space-y-6">
-            {/* Mode Selection (only when idle) */}
-            {isIdle && showModeSelector && (
-              <div className="bg-white rounded-2xl shadow-lg border border-orange-100 p-5">
-                <h3 className="text-base font-semibold text-gray-800 mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-orange-500" />
-                  Choose Travel Mode
-                </h3>
-                <div className="space-y-3">
-                  {(['free', 'navigation'] as const).map((m) => (
-                    <button
-                      key={m}
-                      onClick={() => handleModeChange(m)}
-                      className={`
-                        w-full p-4 rounded-xl border-2 transition-all text-left
-                        ${mode === m 
-                          ? 'border-orange-500 bg-orange-50 shadow-md' 
-                          : 'border-gray-200 hover:border-orange-300 hover:bg-orange-50/50'
-                        }
-                      `}
-                    >
-                      <div className="flex items-start justify-between">
-                        <div className="flex items-start gap-3">
-                          <div className={`p-2 rounded-lg ${
-                            mode === m ? 'bg-orange-100' : 'bg-gray-100'
-                          }`}>
-                            {m === 'free' ? (
-                              <Activity className="w-5 h-5 text-orange-600" />
-                            ) : (
-                              <Navigation className="w-5 h-5 text-orange-600" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-gray-900">
-                              {m === 'free' ? 'Free Ride' : 'Route Navigation'}
-                            </p>
-                            <p className="text-xs text-gray-500 mt-0.5">
-                              {m === 'free' 
-                                ? 'Cycling freely without a designed route' 
-                                : 'Follow the pre-defined route guidelines'}
-                            </p>
-                          </div>
-                        </div>
-                        {mode === m && (
-                          <div className="w-5 h-5 bg-orange-500 rounded-full flex items-center justify-center">
-                            <div className="w-2 h-2 bg-white rounded-full" />
-                          </div>
-                        )}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
             {/* Statistics Panel */}
             {isActive && (
               <div className="bg-white rounded-2xl shadow-lg border border-orange-100 overflow-hidden">

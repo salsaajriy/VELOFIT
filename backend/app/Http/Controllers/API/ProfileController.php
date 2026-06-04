@@ -3,15 +3,11 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 
 class ProfileController extends Controller
 {
-    public function show(Request $request)
-    {
-        return response()->json($request->user());
-    }
-
     public function update(Request $request)
     {
         $user = $request->user();
@@ -34,5 +30,15 @@ class ProfileController extends Controller
             'message' => 'Profile updated successfully.',
             'data' => $user
         ]);
+    }
+
+    public function show(Request $request)
+    {
+        $user = $request->user();
+        
+        $userData = $user->toArray();
+        $userData['age'] = $user->birth_date ? Carbon::parse($user->birth_date)->age : null;
+        
+        return response()->json($userData);
     }
 }

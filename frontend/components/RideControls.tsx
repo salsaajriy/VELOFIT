@@ -88,7 +88,7 @@ export function RideControls({
           "
         >
           <Play className="w-4 h-4" />
-          <span>Lanjutkan</span>
+          <span>Resume</span>
         </button>
       )}
 
@@ -105,7 +105,7 @@ export function RideControls({
         "
       >
         <Square className="w-4 h-4" />
-        <span>Selesai & Simpan</span>
+        <span>Finish & Save</span>
       </button>
     </div>
   );

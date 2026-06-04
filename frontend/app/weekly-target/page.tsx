@@ -3,84 +3,61 @@
 import { useState, useEffect } from 'react';
 import Sidebar from '@/components/sidebar';
 
-// ============================================================
-// TYPES - Berdasarkan struktur Goal dari Google Fit API [citation:6]
-// ============================================================
+type TargetType = 'Daily' | 'Weekly';
 
-type GoalPeriod = 'DAILY' | 'WEEKLY';
-type MetricType = 'DISTANCE' | 'STEPS' | 'CALORIES';
-
-interface FitnessGoal {
-  id: string;
-  metric: MetricType;
-  targetValue: number;      // target dalam km (distance) atau kkal (calories)
-  period: GoalPeriod;
+interface Target {
+  distance: number;
   startDate: string;
   endDate?: string;
-  isActive: boolean;
-  currentProgress: number;  // progress saat ini dalam periode berjalan
 }
 
-interface DailyActivity {
+interface TargetHistory {
+  id: string;
+  type: TargetType;
+  distance: number;
+  startDate: string;
+  endDate?: string;
+}
+
+interface DailyProgress {
   date: string;
-  distance: number;   // km
-  steps: number;      // langkah
-  calories: number;   // kkal
+  distance: number;
 }
 
-interface WeeklySummary {
+interface WeeklyProgress {
   weekStart: string;
   totalDistance: number;
-  totalSteps: number;
-  totalCalories: number;
-  averageDaily: number;
+  days: {
+    date: string;
+    distance: number;
+    achieved: boolean;
+  }[];
 }
 
-// ============================================================
-// DUMMY DATA - Simulasi data aktivitas harian
-// ============================================================
-
-const generateDummyDailyData = (startDate: string, days: number): DailyActivity[] => {
-  const data: DailyActivity[] = [];
-  const start = new Date(startDate);
+// Dummy data for daily progress (30 days)
+const generateDummyDailyProgress = (): DailyProgress[] => {
+  const data: DailyProgress[] = [];
+  const today = new Date();
   
-  for (let i = 0; i < days; i++) {
-    const date = new Date(start);
-    date.setDate(start.getDate() + i);
+  for (let i = 29; i >= 0; i--) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
     const dateStr = date.toISOString().split('T')[0];
     
-    // Simulasi variasi aktivitas harian
-    const baseDistance = 4 + Math.random() * 6;
-    const baseSteps = baseDistance * 1300;
-    const baseCalories = baseDistance * 50;
-    
+    // Simulate varying distances: 0-10 km, sometimes 0 for rest days
+    const randomDistance = Math.random() * 10;
     data.push({
       date: dateStr,
-      distance: Math.round(baseDistance * 10) / 10,
-      steps: Math.round(baseSteps),
-      calories: Math.round(baseCalories),
+      distance: Math.round(randomDistance * 10) / 10,
     });
   }
+  
   return data;
 };
 
-// Data dummy 30 hari terakhir
-const dummyDailyActivities: DailyActivity[] = generateDummyDailyData('2026-04-13', 30);
+const dummyDailyProgress: DailyProgress[] = generateDummyDailyProgress();
 
-// ============================================================
-// HELPER FUNCTIONS
-// ============================================================
-
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-}
-
-function formatFullDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
-}
-
+// Helper functions
 function getWeekStart(date: Date): string {
   const d = new Date(date);
   const day = d.getDay();
@@ -88,493 +65,158 @@ function getWeekStart(date: Date): string {
   return new Date(d.setDate(diff)).toISOString().split('T')[0];
 }
 
-function calculateWeeklySummaries(activities: DailyActivity[]): WeeklySummary[] {
-  const weeklyMap = new Map<string, { distance: number; steps: number; calories: number; days: number }>();
-  
-  activities.forEach(activity => {
-    const weekStart = getWeekStart(new Date(activity.date));
-    const existing = weeklyMap.get(weekStart);
-    if (existing) {
-      existing.distance += activity.distance;
-      existing.steps += activity.steps;
-      existing.calories += activity.calories;
-      existing.days += 1;
-    } else {
-      weeklyMap.set(weekStart, {
-        distance: activity.distance,
-        steps: activity.steps,
-        calories: activity.calories,
-        days: 1,
-      });
-    }
-  });
-  
-  return Array.from(weeklyMap.entries()).map(([weekStart, data]) => ({
-    weekStart,
-    totalDistance: Math.round(data.distance * 10) / 10,
-    totalSteps: data.steps,
-    totalCalories: data.calories,
-    averageDaily: Math.round((data.distance / data.days) * 10) / 10,
-  }));
+function formatDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'short' });
 }
 
-// ============================================================
-// PROGRESS RING COMPONENT - Mirip Google Fit [citation:1]
-// ============================================================
-
-interface ProgressRingProps {
-  current: number;
-  target: number;
-  size?: number;
-  strokeWidth?: number;
-  color?: string;
-  label: string;
-  unit: string;
+function formatFullDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-function ProgressRing({ 
-  current, 
-  target, 
-  size = 120, 
-  strokeWidth = 8,
-  color = '#e8571e',
-  label,
-  unit 
-}: ProgressRingProps) {
-  const radius = (size - strokeWidth) / 2;
-  const circumference = radius * 2 * Math.PI;
-  const percent = Math.min(Math.max((current / target) * 100, 0), 100);
-  const strokeDashoffset = circumference - (percent / 100) * circumference;
-  
-  return (
-    <div className="flex flex-col items-center">
-      <div className="relative" style={{ width: size, height: size }}>
-        <svg width={size} height={size} className="transform -rotate-90">
-          {/* Background circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke="#e5e7eb"
-            strokeWidth={strokeWidth}
-          />
-          {/* Progress circle */}
-          <circle
-            cx={size / 2}
-            cy={size / 2}
-            r={radius}
-            fill="none"
-            stroke={color}
-            strokeWidth={strokeWidth}
-            strokeLinecap="round"
-            strokeDasharray={circumference}
-            strokeDashoffset={strokeDashoffset}
-            className="transition-all duration-1000 ease-out"
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-2xl font-black text-gray-900">{current}</span>
-          <span className="text-xs text-gray-400">{unit}</span>
-        </div>
-      </div>
-      <div className="mt-2 text-center">
-        <p className="text-xs font-semibold text-gray-500">{label}</p>
-        <p className="text-xs text-gray-400">Target: {target} {unit}</p>
-      </div>
-    </div>
-  );
+function formatDayName(dateStr: string): string {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('en-US', { weekday: 'short' });
 }
 
-// ============================================================
-// GOAL CARD - Card untuk setiap metrik (mirip Google Fit) [citation:9]
-// ============================================================
+// ── Statistics Card ─────────────────────────────────────────────────────────
 
-interface GoalCardProps {
-  title: string;
-  metric: MetricType;
-  current: number;
-  target: number;
-  unit: string;
-  icon: React.ReactNode;
-  color: string;
-  onEdit: () => void;
-}
-
-function GoalCard({ title, current, target, unit, icon, color, onEdit, metric }: GoalCardProps) {
-  const percent = Math.min(Math.round((current / target) * 100), 100);
-  
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 hover:shadow-md transition-shadow">
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${color}15` }}>
-            <div className="text-xl">{icon}</div>
-          </div>
-          <div>
-            <h3 className="font-bold text-gray-800">{title}</h3>
-            <p className="text-xs text-gray-400">Target {unit === 'km' ? 'mingguan' : metric === 'WEEKLY' ? 'mingguan' : 'harian'}</p>
-          </div>
-        </div>
-        <button
-          onClick={onEdit}
-          className="text-gray-400 hover:text-orange-500 transition-colors p-1"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-            <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
-        </button>
-      </div>
-      
-      <div className="mb-3">
-        <div className="flex items-baseline justify-between mb-1">
-          <span className="text-2xl font-black" style={{ color }}>{current.toLocaleString()}</span>
-          <span className="text-sm text-gray-400">/ {target.toLocaleString()} {unit}</span>
-        </div>
-        <div className="relative h-2 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
-            style={{ width: `${percent}%`, backgroundColor: color }}
-          />
-        </div>
-        <p className="text-xs text-gray-400 mt-2">{percent}% tercapai</p>
-      </div>
-    </div>
-  );
-}
-
-// ============================================================
-// ONBOARDING GOAL SETUP - Pengaturan target awal (mirip Google Fit) [citation:1][citation:10]
-// ============================================================
-
-interface OnboardingModalProps {
-  onComplete: (goals: { distance: number; period: GoalPeriod }) => void;
-  onSkip: () => void;
-}
-
-function OnboardingModal({ onComplete, onSkip }: OnboardingModalProps) {
-  const [distance, setDistance] = useState<number>(5);
-  const [period, setPeriod] = useState<GoalPeriod>('DAILY');
-  const [step, setStep] = useState<1 | 2>(1);
-  
-  // Rekomendasi dari AHA: 150 menit per minggu ~ setara 5km/hari [citation:1]
-  const recommendations = {
-    DAILY: {
-      min: 3,
-      recommended: 5,
-      max: 15,
-      label: 'Rekomendasi: 5 km/hari (setara 30-45 menit jalan cepat)'
-    },
-    WEEKLY: {
-      min: 20,
-      recommended: 35,
-      max: 100,
-      label: 'Rekomendasi: 35 km/minggu (setara 150 menit aktivitas moderat)'
-    }
-  };
-  
-  const handleNext = () => {
-    if (step === 1) {
-      setStep(2);
-    } else {
-      onComplete({ distance, period });
-    }
-  };
-  
-  return (
-    <>
-      <div className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm" />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden">
-          {/* Header with step indicator */}
-          <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-            <div className="flex items-center justify-between mb-2">
-              <h2 className="text-xl font-black text-gray-900">
-                {step === 1 ? 'Tentukan Target Anda' : 'Atur Target Jarak'}
-              </h2>
-              <button onClick={onSkip} className="text-gray-400 hover:text-gray-600 text-sm">
-                Lewati
-              </button>
-            </div>
-            <div className="flex gap-1">
-              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 1 ? 'bg-orange-500' : 'bg-gray-200'}`} />
-              <div className={`h-1 flex-1 rounded-full transition-all ${step >= 2 ? 'bg-orange-500' : 'bg-gray-200'}`} />
-            </div>
-          </div>
-          
-          <div className="p-6">
-            {step === 1 ? (
-              <div className="space-y-6">
-                <p className="text-gray-600 text-sm">
-                  Google Fit membantu Anda tetap aktif dengan target yang realistis. 
-                  Pilih apakah Anda ingin target harian atau mingguan.
-                </p>
-                
-                <div className="grid grid-cols-2 gap-4">
-                  <button
-                    onClick={() => setPeriod('DAILY')}
-                    className={`p-4 rounded-xl border-2 transition-all text-left ${
-                      period === 'DAILY' 
-                        ? 'border-orange-500 bg-orange-50' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">📅</div>
-                    <div className="font-bold text-gray-900">Daily</div>
-                    <div className="text-xs text-gray-500">Target setiap hari</div>
-                  </button>
-                  
-                  <button
-                    onClick={() => setPeriod('WEEKLY')}
-                    className={`p-4 rounded-xl border-2 transition-all text-left ${
-                      period === 'WEEKLY' 
-                        ? 'border-orange-500 bg-orange-50' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                  >
-                    <div className="text-2xl mb-2">📊</div>
-                    <div className="font-bold text-gray-900">Weekly</div>
-                    <div className="text-xs text-gray-500">Target fleksibel per minggu</div>
-                  </button>
-                </div>
-                
-                <div className="bg-blue-50 rounded-xl p-3">
-                  <p className="text-xs text-blue-700">
-                    💡 {period === 'DAILY' 
-                      ? 'Target harian cocok untuk rutinitas konsisten setiap hari.' 
-                      : 'Target mingguan lebih fleksibel - Anda bisa beradaptasi dengan jadwal sibuk atau liburan.'}
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                <p className="text-gray-600 text-sm">
-                  {recommendations[period].label}
-                </p>
-                
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">
-                    Target Jarak
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="range"
-                      min={recommendations[period].min}
-                      max={recommendations[period].max}
-                      step={period === 'DAILY' ? 0.5 : 1}
-                      value={distance}
-                      onChange={(e) => setDistance(Number(e.target.value))}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
-                    />
-                    <div className="flex justify-between mt-2 text-xs text-gray-400">
-                      <span>{recommendations[period].min} km</span>
-                      <span>{recommendations[period].recommended} km</span>
-                      <span>{recommendations[period].max} km</span>
-                    </div>
-                  </div>
-                  <div className="mt-4 text-center">
-                    <span className="text-3xl font-black text-orange-500">{distance}</span>
-                    <span className="text-gray-500 ml-1">km {period === 'DAILY' ? 'per hari' : 'per minggu'}</span>
-                  </div>
-                </div>
-                
-                <div className="bg-gray-50 rounded-xl p-3">
-                  <p className="text-xs text-gray-600">
-                    🔄 {period === 'DAILY' 
-                      ? 'Setiap hari, target akan di-reset. Anda bisa mengubah target kapan saja di halaman Profile.'
-                      : 'Target mingguan memberikan kebebasan mengatur intensitas harian - yang penting total tercapai dalam seminggu.'}
-                  </p>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          <div className="px-6 pb-6 flex gap-3">
-            {step === 1 && (
-              <button onClick={onSkip} className="flex-1 py-3 rounded-xl text-sm font-bold border border-gray-200">
-                Skip
-              </button>
-            )}
-            <button
-              onClick={handleNext}
-              className="flex-1 py-3 rounded-xl text-sm font-bold text-white"
-              style={{ background: 'linear-gradient(135deg, #e8571e, #f0a500)' }}
-            >
-              {step === 1 ? 'Lanjutkan' : 'Mulai'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ============================================================
-// EDIT GOAL MODAL
-// ============================================================
-
-interface EditGoalModalProps {
-  metric: MetricType;
-  currentTarget: number;
-  period: GoalPeriod;
+interface StatisticsCardProps {
+  activeType: TargetType;
   currentProgress: number;
-  unit: string;
-  onSave: (newTarget: number) => void;
-  onClose: () => void;
+  targetDistance: number;
+  weeklyData?: WeeklyProgress;
+  dailyData?: DailyProgress[];
+  streakDays: number;
+  bestDay: { date: string; distance: number } | null;
+  totalThisPeriod: number;
+  averagePerDay: number;
 }
 
-function EditGoalModal({ metric, currentTarget, period, currentProgress, unit, onSave, onClose }: EditGoalModalProps) {
-  const [target, setTarget] = useState(String(currentTarget));
-  const [saving, setSaving] = useState(false);
-  
-  const handleSave = async () => {
-    setSaving(true);
-    await new Promise(r => setTimeout(r, 500));
-    onSave(Number(target));
-    setSaving(false);
-    onClose();
-  };
-  
-  const getRecommendation = () => {
-    if (metric === 'DISTANCE') {
-      if (period === 'DAILY') return { min: 2, max: 20, step: 0.5, recommended: 5 };
-      return { min: 15, max: 100, step: 1, recommended: 35 };
-    }
-    // CALORIES
-    if (period === 'DAILY') return { min: 100, max: 1000, step: 50, recommended: 300 };
-    return { min: 1000, max: 7000, step: 100, recommended: 2100 };
-  };
-  
-  const rec = getRecommendation();
-  const numTarget = Number(target);
+function StatisticsCard({ 
+  activeType, 
+  currentProgress, 
+  targetDistance, 
+  streakDays,
+  bestDay,
+  totalThisPeriod,
+  averagePerDay
+}: StatisticsCardProps) {
+  const percent = Math.min(Math.round((currentProgress / targetDistance) * 100), 100);
+  const remaining = Math.max(targetDistance - currentProgress, 0);
   
   return (
-    <>
-      <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-100">
-          <div className="px-6 pt-6 pb-4 border-b border-gray-100">
-            <h2 className="text-lg font-black text-gray-900">
-              Ubah Target {metric === 'DISTANCE' ? 'Jarak' : 'Kalori'}
-            </h2>
-            <p className="text-xs text-gray-400 mt-0.5">
-              Progress saat ini: {currentProgress} {unit}
-            </p>
-          </div>
-          
-          <div className="p-6">
-            <div className="mb-4">
-              <div className="relative">
-                <input
-                  type="number"
-                  step={rec.step}
-                  min={rec.min}
-                  max={rec.max}
-                  value={target}
-                  onChange={(e) => setTarget(e.target.value)}
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 font-semibold text-center text-xl"
-                />
-                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-400">
-                  {unit}
-                </span>
-              </div>
-              <input
-                type="range"
-                min={rec.min}
-                max={rec.max}
-                step={rec.step}
-                value={numTarget}
-                onChange={(e) => setTarget(e.target.value)}
-                className="w-full mt-3 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
-              />
-            </div>
-            
-            <div className="flex items-center justify-between text-xs text-gray-500 mb-4">
-              <span>Ringan</span>
-              <span>Rekomendasi: {rec.recommended}</span>
-              <span>Intens</span>
-            </div>
-          </div>
-          
-          <div className="px-6 pb-6 flex gap-3">
-            <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold border border-gray-200">
-              Batal
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-1 py-3 rounded-xl text-sm font-bold text-white transition-all"
-              style={{ background: 'linear-gradient(135deg, #e8571e, #f0a500)' }}
-            >
-              {saving ? 'Menyimpan...' : 'Simpan'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-// ============================================================
-// WEEKLY HISTORY CHART
-// ============================================================
-
-interface WeeklyHistoryChartProps {
-  weeklySummaries: WeeklySummary[];
-  weeklyTarget: number;
-}
-
-function WeeklyHistoryChart({ weeklySummaries, weeklyTarget }: WeeklyHistoryChartProps) {
-  const last8Weeks = weeklySummaries.slice(-8);
-  const maxValue = Math.max(
-    ...last8Weeks.map(w => w.totalDistance),
-    weeklyTarget
-  );
-  
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-      <div className="flex items-center justify-between mb-6">
+    <div className="bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
+      <div className="flex items-center justify-between mb-4">
         <div>
-          <h3 className="font-bold text-gray-900">Riwayat Perbandingan Mingguan</h3>
-          <p className="text-xs text-gray-400">Bandingkan pencapaian dengan target mingguan</p>
+          <p className="text-orange-100 text-xs font-semibold uppercase tracking-wider">
+            {activeType === 'Daily' ? 'DAILY TARGET' : 'WEEKLY TARGET'}
+          </p>
+          <p className="text-3xl font-black mt-1">{targetDistance} km</p>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-gradient-to-t from-gray-300 to-gray-400" />
-            <span className="text-xs text-gray-500">Target</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-full bg-gradient-to-t from-orange-500 to-orange-600" />
-            <span className="text-xs text-gray-500">Aktual</span>
-          </div>
+        <div className="text-right">
+          <p className="text-orange-100 text-xs">Progress</p>
+          <p className="text-2xl font-black">{percent}%</p>
         </div>
       </div>
       
-      <div className="flex items-end gap-2 h-64 overflow-x-auto pb-4">
-        {last8Weeks.map((week) => {
-          const actual = week.totalDistance;
-          const target = weeklyTarget;
-          const actualPercent = (actual / maxValue) * 100;
-          const targetPercent = (target / maxValue) * 100;
-          const achievedPercent = Math.min(Math.round((actual / target) * 100), 100);
+      <div className="relative h-3 bg-orange-400/30 rounded-full overflow-hidden mb-4">
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-white transition-all duration-700"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      
+      <div className="grid grid-cols-3 gap-3 mt-4 pt-4 border-t border-orange-400/30">
+        <div>
+          <p className="text-orange-100 text-xs">Current</p>
+          <p className="text-xl font-bold">{currentProgress.toFixed(1)} km</p>
+        </div>
+        <div>
+          <p className="text-orange-100 text-xs">Remaining</p>
+          <p className="text-xl font-bold">{remaining.toFixed(1)} km</p>
+        </div>
+        <div>
+          <p className="text-orange-100 text-xs">Daily Avg</p>
+          <p className="text-xl font-bold">{averagePerDay.toFixed(1)} km</p>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t border-orange-400/30">
+        <div>
+          <p className="text-orange-100 text-xs">🔥 Streak</p>
+          <p className="text-lg font-bold">{streakDays} days</p>
+        </div>
+        <div>
+          <p className="text-orange-100 text-xs">🏆 Best Day</p>
+          <p className="text-lg font-bold">
+            {bestDay ? `${bestDay.distance.toFixed(1)} km` : '-'}
+          </p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Daily Breakdown Table ───────────────────────────────────────────────────
+
+function DailyBreakdown({ 
+  days, 
+  targetDistance 
+}: { 
+  days: { date: string; distance: number; achieved: boolean }[];
+  targetDistance: number;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+      <div className="px-5 py-4 border-b border-gray-100 bg-gray-50/50">
+        <h3 className="font-bold text-gray-900 flex items-center gap-2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-orange-500">
+            <path d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" strokeLinecap="round" />
+          </svg>
+          Daily Breakdown
+        </h3>
+        <p className="text-xs text-gray-400 mt-1">Detailed daily achievements for this period</p>
+      </div>
+      
+      <div className="divide-y divide-gray-100">
+        {days.map((day, idx) => {
+          const percent = Math.min(Math.round((day.distance / targetDistance) * 100), 100);
           
           return (
-            <div key={week.weekStart} className="flex flex-col items-center gap-2 min-w-[70px]">
-              <div className="relative flex items-end gap-1 h-48">
-                <div
-                  className="w-7 bg-gradient-to-t from-gray-300 to-gray-400 rounded-t-lg transition-all duration-500"
-                  style={{ height: `${targetPercent}%`, minHeight: '4px' }}
-                />
-                <div
-                  className="w-7 bg-gradient-to-t from-orange-500 to-orange-600 rounded-t-lg transition-all duration-500"
-                  style={{ height: `${actualPercent}%`, minHeight: '4px' }}
-                />
-              </div>
-              <div className="text-center">
-                <div className="text-xs font-medium text-gray-600">{formatDate(week.weekStart)}</div>
-                <div className={`text-xs font-bold mt-1 ${achievedPercent >= 100 ? 'text-green-600' : 'text-orange-500'}`}>
-                  {actual.toFixed(1)}/{target}km
+            <div key={idx} className="px-5 py-3 hover:bg-gray-50 transition-colors">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                  <span className="text-sm font-semibold text-gray-700 w-20">
+                    {formatDayName(day.date)}
+                  </span>
+                  <span className="text-xs text-gray-400">
+                    {formatDate(day.date)}
+                  </span>
                 </div>
+                <div className="flex items-center gap-3">
+                  <span className={`text-sm font-bold ${day.achieved ? 'text-green-600' : 'text-orange-500'}`}>
+                    {day.distance.toFixed(1)} km
+                  </span>
+                  {day.achieved ? (
+                    <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">
+                      ✓ Target Met
+                    </span>
+                  ) : (
+                    <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">
+                      {percent}%
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="relative h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${
+                    day.achieved ? 'bg-green-500' : 'bg-orange-500'
+                  }`}
+                  style={{ width: `${Math.min(percent, 100)}%` }}
+                />
               </div>
             </div>
           );
@@ -584,284 +226,609 @@ function WeeklyHistoryChart({ weeklySummaries, weeklyTarget }: WeeklyHistoryChar
   );
 }
 
-// ============================================================
-// MAIN PAGE - Mirip Google Fit [citation:1][citation:2]
-// ============================================================
+// ── Add Target Modal (distance only) ───────────────────────────────────────
 
-export default function GoogleFitStylePage() {
-  const [showOnboarding, setShowOnboarding] = useState(true);
-  const [activePeriod, setActivePeriod] = useState<GoalPeriod>('DAILY');
-  const [distanceGoal, setDistanceGoal] = useState<number>(5);
-  const [caloriesGoal, setCaloriesGoal] = useState<number>(300);
-  const [goalHistory, setGoalHistory] = useState<FitnessGoal[]>([]);
-  
-  // Edit modal state
-  const [editingMetric, setEditingMetric] = useState<MetricType | null>(null);
-  
-  // Hitung progress saat ini
-  const today = new Date().toISOString().split('T')[0];
-  const todayActivity = dummyDailyActivities.find(a => a.date === today) || {
-    date: today,
-    distance: 4.2,
-    steps: 5460,
-    calories: 210,
+interface AddTargetModalProps {
+  type: TargetType;
+  currentDistance: number;
+  onSave: (distance: number) => void;
+  onClose: () => void;
+}
+
+function AddTargetModal({ type, currentDistance, onSave, onClose }: AddTargetModalProps) {
+  const [distance, setDistance] = useState(String(currentDistance));
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    await new Promise((r) => setTimeout(r, 700));
+    onSave(Number(distance) || 0);
+    setSaving(false);
+    setSaved(true);
+    await new Promise((r) => setTimeout(r, 600));
+    onClose();
   };
-  
-  const currentWeekStart = getWeekStart(new Date());
-  const currentWeekActivities = dummyDailyActivities.filter(
-    a => getWeekStart(new Date(a.date)) === currentWeekStart
+
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+          <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-gray-100">
+            <div>
+              <h2 className="text-lg font-black text-gray-900">Set {type} Target</h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {type === 'Daily' 
+                  ? 'Distance target you want to achieve each day' 
+                  : 'Total distance target you want to achieve in a week'}
+              </p>
+            </div>
+            <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+                <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="px-6 py-5">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">
+                Distance Target
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min={0}
+                  step={0.5}
+                  value={distance}
+                  onChange={(e) => setDistance(e.target.value)}
+                  placeholder="5"
+                  className="w-full px-4 py-3 pr-14 bg-gray-50 border border-gray-200 rounded-xl text-gray-800 font-semibold text-sm focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-bold text-gray-400">km</span>
+              </div>
+              <div className="flex gap-2 mt-3 flex-wrap">
+                {type === 'Daily' 
+                  ? [3, 5, 8, 10].map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => setDistance(String(v))}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          distance === String(v) ? 'text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                        style={distance === String(v) ? { background: 'linear-gradient(135deg,#e8571e,#f0a500)' } : {}}
+                      >
+                        {v} km
+                      </button>
+                    ))
+                  : [20, 30, 40, 50].map((v) => (
+                      <button
+                        key={v}
+                        onClick={() => setDistance(String(v))}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                          distance === String(v) ? 'text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                        }`}
+                        style={distance === String(v) ? { background: 'linear-gradient(135deg,#e8571e,#f0a500)' } : {}}
+                      >
+                        {v} km/week
+                      </button>
+                    ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="px-6 pb-6 flex gap-3">
+            <button onClick={onClose} className="flex-1 py-3 rounded-xl text-sm font-bold border border-gray-200 text-gray-600 hover:bg-gray-50">
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || saved}
+              className="flex-1 py-3 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 transition-all"
+              style={{ background: saved ? '#22c55e' : 'linear-gradient(135deg, #e8571e, #f0a500)' }}
+            >
+              {saving ? (
+                <svg className="animate-spin w-4 h-4" viewBox="0 0 24 24" fill="none">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="white" strokeWidth="4" />
+                  <path className="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8z" />
+                </svg>
+              ) : saved ? (
+                'Saved!'
+              ) : (
+                'Save Target'
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
+}
+
+// ── Confirmation Modal ─────────────────────────────────────────────────────
+
+interface ConfirmSwitchModalProps {
+  fromType: TargetType;
+  toType: TargetType;
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
+function ConfirmSwitchModal({ fromType, toType, onConfirm, onCancel }: ConfirmSwitchModalProps) {
+  return (
+    <>
+      <div className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm" onClick={onCancel} />
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="w-full max-w-sm bg-white rounded-2xl shadow-2xl border border-gray-100 overflow-hidden">
+          <div className="p-6 text-center">
+            <div className="w-12 h-12 mx-auto mb-4 rounded-full bg-orange-100 flex items-center justify-center">
+              <svg viewBox="0 0 24 24" fill="none" stroke="#e8571e" strokeWidth="2" className="w-6 h-6">
+                <path d="M12 9v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" />
+              </svg>
+            </div>
+            <h3 className="text-lg font-bold text-gray-900 mb-2">Switch Target?</h3>
+            <p className="text-sm text-gray-500 mb-6">
+              You are about to switch from <span className="font-bold text-orange-600">{fromType}</span> target to{' '}
+              <span className="font-bold text-orange-600">{toType}</span> target.<br />
+              Your previous {fromType} target will end today.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={onCancel} className="flex-1 py-2.5 rounded-xl text-sm font-bold border border-gray-200">
+                Cancel
+              </button>
+              <button onClick={onConfirm} className="flex-1 py-2.5 rounded-xl text-sm font-bold text-white" style={{ background: 'linear-gradient(135deg,#e8571e,#f0a500)' }}>
+                Yes, Switch
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ── History Timeline ──────────────────────────────────────────────────────
+
+function HistoryTimeline({ history }: { history: TargetHistory[] }) {
+  const sorted = [...history].sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime());
   
-  const weeklySummary: WeeklySummary = {
-    weekStart: currentWeekStart,
-    totalDistance: currentWeekActivities.reduce((sum, a) => sum + a.distance, 0),
-    totalSteps: currentWeekActivities.reduce((sum, a) => sum + a.steps, 0),
-    totalCalories: currentWeekActivities.reduce((sum, a) => sum + a.calories, 0),
-    averageDaily: currentWeekActivities.length > 0 
-      ? currentWeekActivities.reduce((sum, a) => sum + a.distance, 0) / currentWeekActivities.length 
-      : 0,
-  };
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-orange-500">
+          <path d="M12 8v4l3 3M12 22a10 10 0 100-20 10 10 0 000 20z" strokeLinecap="round" />
+        </svg>
+        Target Change History
+      </h3>
+      
+      {sorted.length === 0 ? (
+        <p className="text-sm text-gray-400 text-center py-8">No target history yet</p>
+      ) : (
+        <div className="relative pl-6 border-l-2 border-orange-200 space-y-5">
+          {sorted.map((item) => (
+            <div key={item.id} className="relative">
+              <div className="absolute -left-[26px] w-3 h-3 rounded-full bg-gradient-to-r from-orange-500 to-orange-600 border-2 border-white shadow-sm" />
+              <div className="mb-1 flex items-center gap-2 flex-wrap">
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                  item.type === 'Daily' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'
+                }`}>
+                  {item.type}
+                </span>
+                <span className="text-xs text-gray-400">{formatFullDate(item.startDate)}</span>
+                {item.endDate && (
+                  <>
+                    <span className="text-xs text-gray-300">→</span>
+                    <span className="text-xs text-gray-400">{formatFullDate(item.endDate)}</span>
+                  </>
+                )}
+              </div>
+              <p className="text-sm font-semibold text-gray-800">
+                Target {item.distance} km {item.type === 'Daily' ? 'per day' : 'per week'}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Weekly Comparison Chart ───────────────────────────────────────────────
+
+function WeeklyComparisonChart({ 
+  weeklyProgress, 
+  weeklyTargets 
+}: { 
+  weeklyProgress: WeeklyProgress[];
+  weeklyTargets: Map<string, number>;
+}) {
+  const weeks = weeklyProgress.slice(-8);
+  const maxValue = Math.max(...weeks.map(w => w.totalDistance), ...Array.from(weeklyTargets.values()), 1);
   
-  const weeklySummaries = calculateWeeklySummaries(dummyDailyActivities);
+  return (
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <h3 className="text-base font-bold text-gray-900 mb-4 flex items-center gap-2">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5 text-orange-500">
+          <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" strokeLinecap="round" />
+        </svg>
+        Weekly Comparison (Actual vs Target)
+      </h3>
+      
+      <div className="flex items-end gap-3 h-64 overflow-x-auto pb-4">
+        {weeks.map((week) => {
+          const target = weeklyTargets.get(week.weekStart) || 35;
+          const actual = week.totalDistance;
+          
+          return (
+            <div key={week.weekStart} className="flex flex-col items-center gap-2 min-w-[80px]">
+              <div className="relative flex items-end gap-1 h-48">
+                <div
+                  className="w-8 bg-gradient-to-t from-gray-300 to-gray-400 rounded-t-lg transition-all duration-500"
+                  style={{ height: `${(target / maxValue) * 100}%`, minHeight: '4px' }}
+                />
+                <div
+                  className="w-8 bg-gradient-to-t from-orange-500 to-orange-600 rounded-t-lg transition-all duration-500"
+                  style={{ height: `${(actual / maxValue) * 100}%`, minHeight: '4px' }}
+                />
+              </div>
+              <div className="text-center">
+                <div className="text-xs font-bold text-gray-600">{formatDate(week.weekStart)}</div>
+                <div className="text-xs text-gray-500 mt-1">{actual.toFixed(1)}/{target} km</div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      
+      <div className="flex justify-center gap-6 mt-4 pt-3 border-t border-gray-100">
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded bg-gradient-to-t from-gray-300 to-gray-400" />
+          <span className="text-xs text-gray-500">Weekly Target</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-4 h-4 rounded bg-gradient-to-t from-orange-500 to-orange-600" />
+          <span className="text-xs text-gray-500">Actual</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ─────────────────────────────────────────────────────────────
+
+export default function TargetPage() {
+  const [activeTargetType, setActiveTargetType] = useState<TargetType>('Daily');
+  const [dailyTarget, setDailyTarget] = useState<number>(5);
+  const [weeklyTarget, setWeeklyTarget] = useState<number>(35);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [pendingTargetType, setPendingTargetType] = useState<TargetType | null>(null);
   
-  const currentDistance = activePeriod === 'DAILY' ? todayActivity.distance : weeklySummary.totalDistance;
-  const currentCalories = activePeriod === 'DAILY' ? todayActivity.calories : weeklySummary.totalCalories;
+  const [targetHistory, setTargetHistory] = useState<TargetHistory[]>([
+    { id: '1', type: 'Daily', distance: 5, startDate: '2026-04-01' },
+    { id: '2', type: 'Weekly', distance: 40, startDate: '2026-05-01', endDate: '2026-05-07' },
+    { id: '3', type: 'Daily', distance: 5, startDate: '2026-05-08' },
+  ]);
+
+  // Get current date info
+  const today = new Date().toISOString().split('T')[0];
+  const currentWeekStart = getWeekStart(new Date());
   
-  const distanceUnit = activePeriod === 'DAILY' ? 'km/hari' : 'km/minggu';
-  const caloriesUnit = activePeriod === 'DAILY' ? 'kkal/hari' : 'kkal/minggu';
+  // Get today's progress
+  const todayProgress = dummyDailyProgress.find(p => p.date === today)?.distance || 0;
   
-  const handleOnboardingComplete = (goals: { distance: number; period: GoalPeriod }) => {
-    setActivePeriod(goals.period);
-    setDistanceGoal(goals.distance);
-    // Estimate calories goal based on distance (approx 50kcal per km)
-    setCaloriesGoal(Math.round(goals.distance * 50));
-    setShowOnboarding(false);
+  // Get current week progress with daily breakdown
+  const currentWeekDays = dummyDailyProgress.filter(p => getWeekStart(new Date(p.date)) === currentWeekStart);
+  const currentWeekProgress = currentWeekDays.reduce((sum, p) => sum + p.distance, 0);
+  
+  // Prepare weekly progress with daily breakdown
+  const weeklyProgressMap = new Map<string, { totalDistance: number; days: { date: string; distance: number; achieved: boolean }[] }>();
+  
+  dummyDailyProgress.forEach(p => {
+    const weekStart = getWeekStart(new Date(p.date));
+    const targetDist = activeTargetType === 'Daily' ? dailyTarget : weeklyTarget;
+    const achieved = activeTargetType === 'Daily' 
+      ? p.distance >= dailyTarget 
+      : false;
     
-    // Save to history
-    const newGoal: FitnessGoal = {
+    if (!weeklyProgressMap.has(weekStart)) {
+      weeklyProgressMap.set(weekStart, { totalDistance: 0, days: [] });
+    }
+    const week = weeklyProgressMap.get(weekStart)!;
+    week.totalDistance += p.distance;
+    week.days.push({
+      date: p.date,
+      distance: p.distance,
+      achieved: achieved
+    });
+  });
+  
+  const weeklyProgress: WeeklyProgress[] = Array.from(weeklyProgressMap.entries()).map(([weekStart, data]) => ({
+    weekStart,
+    totalDistance: data.totalDistance,
+    days: data.days.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+  }));
+  
+  // Map weekly targets from history
+  const weeklyTargetsMap = new Map<string, number>();
+  targetHistory.forEach(history => {
+    if (history.type === 'Weekly' && history.startDate) {
+      const weekStart = getWeekStart(new Date(history.startDate));
+      weeklyTargetsMap.set(weekStart, history.distance);
+    }
+  });
+  
+  // Get current active target
+  const getCurrentActiveTarget = () => {
+    const activeHistory = targetHistory
+      .filter(h => h.type === activeTargetType && !h.endDate)
+      .sort((a, b) => new Date(b.startDate).getTime() - new Date(a.startDate).getTime())[0];
+    return activeHistory?.distance || (activeTargetType === 'Daily' ? dailyTarget : weeklyTarget);
+  };
+  
+  const targetDistance = getCurrentActiveTarget();
+  const currentProgress = activeTargetType === 'Daily' ? todayProgress : currentWeekProgress;
+  
+  // Calculate statistics
+  const calculateStreakDays = (): number => {
+    let streak = 0;
+    const today = new Date();
+    
+    for (let i = 0; i < 30; i++) {
+      const checkDate = new Date(today);
+      checkDate.setDate(today.getDate() - i);
+      const dateStr = checkDate.toISOString().split('T')[0];
+      const progress = dummyDailyProgress.find(p => p.date === dateStr);
+      
+      if (progress && progress.distance >= dailyTarget) {
+        streak++;
+      } else {
+        break;
+      }
+    }
+    return streak;
+  };
+  
+  const getBestDay = () => {
+    let best = { date: '', distance: 0 };
+    dummyDailyProgress.forEach(p => {
+      if (p.distance > best.distance) {
+        best = { date: p.date, distance: p.distance };
+      }
+    });
+    return best.distance > 0 ? best : null;
+  };
+  
+  const getTotalThisPeriod = (): number => {
+    if (activeTargetType === 'Daily') {
+      // Last 7 days
+      const last7Days = dummyDailyProgress.slice(-7);
+      return last7Days.reduce((sum, p) => sum + p.distance, 0);
+    } else {
+      return currentWeekProgress;
+    }
+  };
+  
+  const getAveragePerDay = (): number => {
+    if (activeTargetType === 'Daily') {
+      const last7Days = dummyDailyProgress.slice(-7);
+      const avg = last7Days.reduce((sum, p) => sum + p.distance, 0) / 7;
+      return avg;
+    } else {
+      return currentWeekProgress / 7;
+    }
+  };
+  
+  // Get current period days for breakdown
+  const getCurrentPeriodDays = () => {
+    if (activeTargetType === 'Daily') {
+      // Last 7 days
+      const last7Days = dummyDailyProgress.slice(-7);
+      return last7Days.map(day => ({
+        date: day.date,
+        distance: day.distance,
+        achieved: day.distance >= dailyTarget
+      }));
+    } else {
+      const currentWeek = weeklyProgress.find(w => w.weekStart === currentWeekStart);
+      return currentWeek?.days || [];
+    }
+  };
+  
+  const handleSwitchTarget = (newType: TargetType) => {
+    if (newType === activeTargetType) return;
+    setPendingTargetType(newType);
+    setShowConfirmModal(true);
+  };
+  
+  const confirmSwitchTarget = () => {
+    if (pendingTargetType) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      setTargetHistory(prev => 
+        prev.map(h => 
+          h.type === activeTargetType && !h.endDate 
+            ? { ...h, endDate: todayStr }
+            : h
+        )
+      );
+      
+      const newTarget: TargetHistory = {
+        id: Date.now().toString(),
+        type: pendingTargetType,
+        distance: pendingTargetType === 'Daily' ? dailyTarget : weeklyTarget,
+        startDate: todayStr,
+      };
+      setTargetHistory(prev => [...prev, newTarget]);
+      setActiveTargetType(pendingTargetType);
+    }
+    setShowConfirmModal(false);
+    setPendingTargetType(null);
+  };
+  
+  const handleSaveTarget = (distance: number) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    
+    setTargetHistory(prev => 
+      prev.map(h => 
+        h.type === activeTargetType && !h.endDate 
+          ? { ...h, endDate: todayStr }
+          : h
+      )
+    );
+    
+    const newTarget: TargetHistory = {
       id: Date.now().toString(),
-      metric: 'DISTANCE',
-      targetValue: goals.distance,
-      period: goals.period,
-      startDate: new Date().toISOString().split('T')[0],
-      isActive: true,
-      currentProgress: 0,
+      type: activeTargetType,
+      distance: distance,
+      startDate: todayStr,
     };
-    setGoalHistory([newGoal]);
+    setTargetHistory(prev => [...prev, newTarget]);
+    
+    if (activeTargetType === 'Daily') {
+      setDailyTarget(distance);
+    } else {
+      setWeeklyTarget(distance);
+    }
   };
   
-  const handleSkipOnboarding = () => {
-    setShowOnboarding(false);
+  const getPeriodLabel = () => {
+    if (activeTargetType === 'Daily') {
+      return `Today (${formatDate(today)})`;
+    } else {
+      return `This week (${formatDate(currentWeekStart)})`;
+    }
   };
-  
-  const handleEditDistanceGoal = (newTarget: number) => {
-    setDistanceGoal(newTarget);
-    // Optional: update estimated calories goal
-    setCaloriesGoal(Math.round(newTarget * 50));
-  };
-  
-  const handleEditCaloriesGoal = (newTarget: number) => {
-    setCaloriesGoal(newTarget);
-  };
-  
-  // Header ring progress aggregation (mirip Google Fit dengan concentric circles) [citation:1]
-  const overallDistancePct = Math.min((currentDistance / distanceGoal) * 100, 100);
-  const overallCaloriesPct = Math.min((currentCalories / caloriesGoal) * 100, 100);
-  const overallAvgPct = (overallDistancePct + overallCaloriesPct) / 2;
   
   return (
     <div className="flex min-h-screen bg-gray-50 font-sans">
       <Sidebar />
       
-      <main className="flex-1 lg:ml-52 pt-14 lg:pt-6 p-6 lg:p-8 overflow-y-auto">
+      <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 p-6 lg:p-8 overflow-y-auto">
         
-        {/* Header with Period Toggle - seperti Google Fit yang bisa pilih daily/weekly [citation:2] */}
-        <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
-          <div>
-            <h1 className="text-2xl font-black text-gray-900">Fitness Goals</h1>
-            <p className="text-sm text-gray-500">Pantau aktivitas dan target Anda</p>
-          </div>
-          
-          <div className="flex bg-white border border-gray-200 rounded-xl p-1 shadow-sm">
-            <button
-              onClick={() => setActivePeriod('DAILY')}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activePeriod === 'DAILY'
-                  ? 'text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-              style={activePeriod === 'DAILY' ? { background: 'linear-gradient(135deg,#e8571e,#f0a500)' } : {}}
-            >
-              Daily
-            </button>
-            <button
-              onClick={() => setActivePeriod('WEEKLY')}
-              className={`px-5 py-2 rounded-lg text-sm font-semibold transition-all ${
-                activePeriod === 'WEEKLY'
-                  ? 'text-white shadow-sm'
-                  : 'text-gray-500 hover:text-gray-700'
-              }`}
-              style={activePeriod === 'WEEKLY' ? { background: 'linear-gradient(135deg,#e8571e,#f0a500)' } : {}}
-            >
-              Weekly
-            </button>
-          </div>
+        {/* Header */}
+        <div className="mb-7 pt-6">
+          <h1 className="text-2xl font-black text-gray-900">Fitness Target</h1>
+          <p className="text-sm text-gray-500 mt-1">Manage your daily or weekly fitness goals</p>
         </div>
         
-        {/* Main Progress Ring - Mirip Google Fit dengan concentric circles [citation:1] */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 mb-6">
-          <div className="flex flex-col lg:flex-row items-center justify-between gap-8">
-            <div className="text-center lg:text-left">
-              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">
-                {activePeriod === 'DAILY' ? 'Hari Ini' : `Minggu Ini (${formatDate(currentWeekStart)})`}
-              </p>
-              <h2 className="text-2xl font-black text-gray-900">
-                {activePeriod === 'DAILY' ? formatFullDate(today) : `Week of ${formatDate(currentWeekStart)}`}
-              </h2>
-              <p className="text-sm text-gray-500 mt-2 max-w-md">
-                {activePeriod === 'DAILY' 
-                  ? 'Jaga konsistensi dengan mencapai target harian Anda.'
-                  : 'Target mingguan memberi fleksibilitas - atur intensitas sesuai jadwal Anda.'}
-              </p>
+        {/* Target Type Selection */}
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 mb-6">
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">Select Target Type</p>
+              <p className="text-sm text-gray-500 mt-0.5">Choose between daily consistency or weekly flexibility</p>
             </div>
-            
-            <div className="relative">
-              {/* Outer ring untuk overall progress */}
-              <div className="relative" style={{ width: 180, height: 180 }}>
-                <svg width={180} height={180} className="transform -rotate-90">
-                  <circle
-                    cx={90}
-                    cy={90}
-                    r={82}
-                    fill="none"
-                    stroke="#f3f4f6"
-                    strokeWidth={12}
-                  />
-                  <circle
-                    cx={90}
-                    cy={90}
-                    r={82}
-                    fill="none"
-                    stroke="url(#gradient)"
-                    strokeWidth={12}
-                    strokeLinecap="round"
-                    strokeDasharray={515.2}
-                    strokeDashoffset={515.2 * (1 - overallAvgPct / 100)}
-                    className="transition-all duration-1000"
-                  />
-                  <defs>
-                    <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#e8571e" />
-                      <stop offset="100%" stopColor="#f0a500" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-3xl font-black text-gray-900">{Math.round(overallAvgPct)}</span>
-                  <span className="text-xs text-gray-400">persen</span>
-                </div>
-              </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => handleSwitchTarget('Daily')}
+                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                  activeTargetType === 'Daily'
+                    ? 'text-white shadow-md'
+                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+                style={activeTargetType === 'Daily' ? { background: 'linear-gradient(135deg,#e8571e,#f0a500)' } : {}}
+              >
+                📅 Daily
+              </button>
+              <button
+                onClick={() => handleSwitchTarget('Weekly')}
+                className={`px-6 py-2.5 rounded-xl font-bold text-sm transition-all ${
+                  activeTargetType === 'Weekly'
+                    ? 'text-white shadow-md'
+                    : 'border border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+                style={activeTargetType === 'Weekly' ? { background: 'linear-gradient(135deg,#e8571e,#f0a500)' } : {}}
+              >
+                📊 Weekly
+              </button>
             </div>
           </div>
         </div>
         
-        {/* Goals Cards - Seperti Google Fit dengan card per metrik [citation:9] */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-          <GoalCard
-            title="Distance"
-            metric="DISTANCE"
-            current={currentDistance}
-            target={distanceGoal}
-            unit={distanceUnit}
-            icon="🏃"
-            color="#e8571e"
-            onEdit={() => setEditingMetric('DISTANCE')}
-          />
-          
-          <GoalCard
-            title="Calories"
-            metric="CALORIES"
-            current={currentCalories}
-            target={caloriesGoal}
-            unit={caloriesUnit}
-            icon="🔥"
-            color="#c0392b"
-            onEdit={() => setEditingMetric('CALORIES')}
+        {/* Statistics Card - Dynamic based on mode */}
+        <div className="mb-6">
+          <StatisticsCard
+            activeType={activeTargetType}
+            currentProgress={currentProgress}
+            targetDistance={targetDistance}
+            streakDays={calculateStreakDays()}
+            bestDay={getBestDay()}
+            totalThisPeriod={getTotalThisPeriod()}
+            averagePerDay={getAveragePerDay()}
           />
         </div>
         
-        {/* Weekly History Chart */}
-        <WeeklyHistoryChart 
-          weeklySummaries={weeklySummaries} 
-          weeklyTarget={activePeriod === 'WEEKLY' ? distanceGoal : distanceGoal * 7}
-        />
+        {/* Action Buttons */}
+        <div className="flex gap-3 mb-6">
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex-1 flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-bold text-sm text-white transition-all hover:opacity-90"
+            style={{ background: 'linear-gradient(135deg,#e8571e,#f0a500)' }}
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-4 h-4">
+              <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+            </svg>
+            Update {activeTargetType === 'Daily' ? 'Daily' : 'Weekly'} Target
+          </button>
+        </div>
         
-        {/* Info Panel - Seperti Google Fit dengan cards edukasi [citation:1] */}
-        <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
-                <span className="text-xl">💡</span>
-              </div>
-              <div>
-                <p className="font-semibold text-blue-800 text-sm">Kenapa target ini?</p>
-                <p className="text-xs text-blue-600">
-                  Berdasarkan rekomendasi AHA, 150 menit aktivitas moderat per minggu 
-                  dapat menurunkan risiko penyakit jantung hingga 30% [citation:1].
-                </p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-gradient-to-r from-orange-50 to-amber-50 rounded-xl p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
-                <span className="text-xl">🎯</span>
-              </div>
-              <div>
-                <p className="font-semibold text-orange-800 text-sm">Tips untuk Anda</p>
-                <p className="text-xs text-orange-600">
-                  {activePeriod === 'DAILY' 
-                    ? 'Coba bagi target harian jadi beberapa sesi pendek - 10 menit di pagi, sore, dan malam.'
-                    : 'Dengan target mingguan, Anda bisa "cadangan" di hari sibuk dan kejar di akhir pekan.'}
-                </p>
-              </div>
+        {/* Daily Breakdown - Complete daily details */}
+        <div className="mb-6">
+          <DailyBreakdown 
+            days={getCurrentPeriodDays()} 
+            targetDistance={activeTargetType === 'Daily' ? dailyTarget : weeklyTarget / 7}
+          />
+        </div>
+        
+        {/* Weekly Comparison Chart */}
+        <div className="mb-6">
+          <WeeklyComparisonChart 
+            weeklyProgress={weeklyProgress} 
+            weeklyTargets={weeklyTargetsMap}
+          />
+        </div>
+        
+        {/* History Timeline */}
+        <HistoryTimeline history={targetHistory} />
+        
+        {/* Info Note */}
+        <div className="mt-6 p-4 bg-blue-50 rounded-xl border border-blue-100">
+          <div className="flex gap-3">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2" className="w-5 h-5 flex-shrink-0 mt-0.5">
+              <path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" strokeLinecap="round" />
+            </svg>
+            <div className="text-sm text-blue-800">
+              <p className="font-semibold mb-1">How do targets work?</p>
+              <p className="text-blue-700">
+                • <strong>Daily Mode</strong>: Statistics show the last 7 days, each day has its own target.<br />
+                • <strong>Weekly Mode</strong>: Statistics focus on weekly target, daily breakdown is still shown.<br />
+                • Every time you switch target types, the history is recorded for performance evaluation.
+              </p>
             </div>
           </div>
         </div>
         
       </main>
       
-      {/* Onboarding Modal */}
-      {showOnboarding && (
-        <OnboardingModal 
-          onComplete={handleOnboardingComplete}
-          onSkip={handleSkipOnboarding}
+      {showAddModal && (
+        <AddTargetModal
+          type={activeTargetType}
+          currentDistance={targetDistance}
+          onSave={handleSaveTarget}
+          onClose={() => setShowAddModal(false)}
         />
       )}
       
-      {/* Edit Goal Modal */}
-      {editingMetric === 'DISTANCE' && (
-        <EditGoalModal
-          metric="DISTANCE"
-          currentTarget={distanceGoal}
-          period={activePeriod}
-          currentProgress={currentDistance}
-          unit={distanceUnit}
-          onSave={handleEditDistanceGoal}
-          onClose={() => setEditingMetric(null)}
-        />
-      )}
-      
-      {editingMetric === 'CALORIES' && (
-        <EditGoalModal
-          metric="CALORIES"
-          currentTarget={caloriesGoal}
-          period={activePeriod}
-          currentProgress={currentCalories}
-          unit={caloriesUnit}
-          onSave={handleEditCaloriesGoal}
-          onClose={() => setEditingMetric(null)}
+      {showConfirmModal && pendingTargetType && (
+        <ConfirmSwitchModal
+          fromType={activeTargetType}
+          toType={pendingTargetType}
+          onConfirm={confirmSwitchTarget}
+          onCancel={() => {
+            setShowConfirmModal(false);
+            setPendingTargetType(null);
+          }}
         />
       )}
     </div>

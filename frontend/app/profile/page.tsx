@@ -12,6 +12,7 @@ export default function ProfilePage() {
     displayName: '',
     weight: '',
     height: '',
+    birthDate: '',
     age: '',
     gender: 'male',
     contact1: '',
@@ -25,7 +26,6 @@ export default function ProfilePage() {
 
   const BACKEND_URL = "http://127.0.0.1:8000";
 
-  // Dummy BMI data untuk tampilan sementara
   const [bmiData, setBmiData] = useState({
     bmi: 0,
     category: '',
@@ -57,6 +57,7 @@ export default function ProfilePage() {
         displayName: data.name || '',
         weight: data.weight || '',
         height: data.height || '',
+        birthDate: data.birth_date || '',
         age: data.age || '',
         gender: data.gender || 'male',
         contact1: data.contact1 || '',
@@ -69,7 +70,6 @@ export default function ProfilePage() {
         setAvatar(data.avatar);
       }
 
-      // Hitung BMI jika ada weight & height
       if (data.weight && data.height) {
         calculateBMI(data.weight, data.height);
       }
@@ -176,6 +176,11 @@ export default function ProfilePage() {
       const token = localStorage.getItem("token");
       console.log("KIRIM:", form);
       
+        let formattedBirthDate = null;
+      if (form.birthDate) {
+        formattedBirthDate = form.birthDate;
+      }
+
       const res = await fetch(`${BACKEND_URL}/api/user/profile`, {
         method: "POST",
         headers: {
@@ -187,6 +192,7 @@ export default function ProfilePage() {
           name: form.displayName,
           weight: Number(form.weight),
           height: Number(form.height),
+          birth_date: formattedBirthDate,
           age: Number(form.age),
           gender: form.gender,
           contact1: form.contact1,
@@ -212,7 +218,6 @@ export default function ProfilePage() {
 
   if (isChecking) return null;
 
-  // Hitung progress bar untuk BMI (range 10-40)
   const bmiProgress = Math.min(Math.max(((bmiData.bmi - 10) / 30) * 100, 0), 100);
 
   return (
@@ -290,10 +295,10 @@ export default function ProfilePage() {
                     
                     <Field label="Age">
                       <input
-                        type="number"
-                        value={form.age}
-                        onChange={handleChange('age')}
-                        placeholder="e.g., 25"
+                        type="date"
+                        value={form.birthDate}
+                        onChange={handleChange('birthDate')}
+                        placeholder="MM/DD/YYYY"
                         className={inputCls}
                       />
                     </Field>

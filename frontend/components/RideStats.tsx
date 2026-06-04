@@ -24,12 +24,12 @@ function formatTime(seconds: number): string {
  
 export function RideStats({ stats, elapsed }: { stats: RideStats; elapsed: number }) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-4">
-      <StatCard label="Waktu"    value={formatTime(elapsed)} />
-      <StatCard label="Jarak"    value={stats.distance.toFixed(2)} unit="km" />
-      <StatCard label="Kecepatan" value={stats.avgSpeed.toFixed(1)} unit="km/h" />
-      <StatCard label="Maks. Speed" value={stats.maxSpeed.toFixed(1)} unit="km/h" />
-      <StatCard label="Kalori"   value={stats.calories.toFixed(0)} unit="kkal" />
+    <div className="grid grid-cols-2 md:grid-cols-3 gap-3 p-2">
+      <StatCard label="Duration"    value={formatTime(elapsed)} />
+      <StatCard label="Distance"    value={stats.distance.toFixed(2)} unit="km" />
+      <StatCard label="Average Speed" value={stats.avgSpeed.toFixed(1)} unit="km/h" />
+      <StatCard label="Max Speed" value={stats.maxSpeed.toFixed(1)} unit="km/h" />
+      <StatCard label="Calories"   value={stats.calories.toFixed(0)} unit="kkal" />
     </div>
   );
 }
