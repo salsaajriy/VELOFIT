@@ -1,17 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Sidebar from '@/components/sidebar';
-
-const rideHistory = [
-  { date: 'Oct 24, 2025', time: '07:30 AM', route: 'Coastal Highway Path', distance: '24.8 km', duration: '1h 12m', status: 'Completed' },
-  { date: 'Oct 22, 2025', time: '06:15 PM', route: 'Downtown Loop', distance: '12.2 km', duration: '45m', status: 'Completed' },
-  { date: 'Oct 20, 2025', time: '08:00 AM', route: 'Mountain Trail A', distance: '5.4 km', duration: '22m', status: 'Incompleted' },
-];
-
-
+import RecentRides from '@/components/RecentRides';
+import RecentTarget from '@/components/RecentTarget';
+import HelmetBatteryCard from '@/components/HelmetBattery';
 
 export default function DashboardPage() {
   const [rideActive, setRideActive] = useState(false);
@@ -61,56 +55,46 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-          {[
-            {
-              icon: (
+        <div className="pb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <div className="mb-3">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" className="w-6 h-6">
                   <path d="M3 3v18h18" strokeLinecap="round" />
                   <path d="M7 16l4-8 4 4 4-6" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
-              ),
-              label: 'Total Distance',
-              value: '0 km',
-            },
-            {
-              icon: (
+              </div>
+              <p className="text-xs text-gray-400 font-medium mb-1">Total Distance</p>
+              <p className="text-xl font-black text-gray-900">0 km</p>
+            </div>
+
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <div className="mb-3">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2" className="w-6 h-6">
                   <circle cx="12" cy="12" r="9" />
                   <path d="M12 7v5l3 3" strokeLinecap="round" />
                 </svg>
-              ),
-              label: 'Duration',
-              value: '0m',
-            },
-            {
-              icon: (
+              </div>
+              <p className="text-xs text-gray-400 font-medium mb-1">Duration</p>
+              <p className="text-xl font-black text-gray-900">0m</p>
+            </div>
+
+            {/* Calories Card */}
+            <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
+              <div className="mb-3">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" className="w-6 h-6">
                   <path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7z" />
                   <circle cx="12" cy="9" r="2.5" />
                 </svg>
-              ),
-              label: 'Calories',
-              value: '0 kcal',
-            },
-            {
-              icon: (
-                <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6">
-                  <rect x="2" y="7" width="16" height="11" rx="2" stroke="#f59e0b" strokeWidth="2" />
-                  <path d="M18 10h3a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-3" stroke="#f59e0b" strokeWidth="2" />
-                  <rect x="4" y="10" width="8" height="5" rx="1" fill="#f59e0b" />
-                </svg>
-              ),
-              label: 'Helmet Battery',
-              value: '65%',
-            },
-          ].map((stat) => (
-            <div key={stat.label} className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
-              <div className="mb-3">{stat.icon}</div>
-              <p className="text-xs text-gray-400 font-medium mb-1">{stat.label}</p>
-              <p className="text-xl font-black text-gray-900">{stat.value}</p>
+              </div>
+              <p className="text-xs text-gray-400 font-medium mb-1">Calories</p>
+              <p className="text-xl font-black text-gray-900">0 kcal</p>
             </div>
-          ))}
+
+            {/* Helmet Battery Card - Replace the static one */}
+            <HelmetBatteryCard />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
@@ -153,74 +137,10 @@ export default function DashboardPage() {
           </div>
  
           <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <p className="text-sm font-bold text-gray-800 mb-0.5">Weekly Target</p>
-            <p className="text-xs text-gray-400 mb-4">Progress towards 150km goal</p>
-            <div className="flex justify-center mb-3">
-              <div className="relative w-24 h-24">
-                <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
-                  <circle cx="50" cy="50" r="38" fill="none" stroke="#e5e7eb" strokeWidth="8" />
-                  <circle
-                    cx="50" cy="50" r="38" fill="none"
-                    stroke="#3b82f6" strokeWidth="8"
-                    strokeDasharray={`${2 * Math.PI * 38 * 0.83} ${2 * Math.PI * 38}`}
-                    strokeLinecap="round"
-                  />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-xl font-black text-gray-900">83%</span>
-                  <span className="text-xs text-gray-400">REACHED</span>
-                </div>
-              </div>
-            </div>
-            <div className="flex justify-between text-xs text-gray-400 font-medium">
-              <span>124.5 KM DONE</span>
-              <span>25.5 KM LEFT</span>
-            </div>
+            <RecentTarget />
           </div>
         </div>
-
-        {/* Recent Ride History */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-            <h3 className="text-base font-black text-gray-900">Recent Ride History</h3>
-            <Link href="/history" className="text-sm font-semibold text-blue-500 hover:text-blue-600 transition-colors">
-              View All
-            </Link>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-560px">
-              <thead>
-                <tr className="border-b border-gray-50">
-                  {['DATE', 'ROUTE', 'DISTANCE', 'DURATION', 'STATUS'].map((col) => (
-                    <th key={col} className="px-6 py-3 text-left text-xs font-bold text-gray-400 tracking-widest uppercase">
-                      {col}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {rideHistory.map((ride, i) => (
-                  <tr key={i} className="border-b border-gray-50 hover:bg-gray-50/50 transition-colors">
-                    <td className="px-6 py-4">
-                      <p className="text-sm font-semibold text-gray-800">{ride.date}</p>
-                      <p className="text-xs text-gray-400">{ride.time}</p>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{ride.route}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-gray-900">{ride.distance}</td>
-                    <td className="px-6 py-4 text-sm text-gray-600">{ride.duration}</td>
-                    <td className="px-6 py-4">
-                      <span className={`inline-flex px-3 py-1 rounded-full text-xs font-bold ${
-                        ride.status === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'
-                      }`}>
-                        {ride.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
+          <RecentRides/>
       </main>
     </div>
   );

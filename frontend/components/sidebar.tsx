@@ -38,8 +38,8 @@ const navItems = [
     icon: FaHelmetSafety,
   },
   {
-    label: 'Weekly Target',
-    href: '/weekly-target',
+    label: 'Goal Achievement',
+    href: '/goals',
     icon: FiTarget,
   },
   {
@@ -90,7 +90,6 @@ function SidebarContent({
         )}
       </div>
 
-      {/* Nav */}
       <nav className="flex flex-1 flex-col gap-1 px-3 py-4">
         {navItems.map((item) => {
           const isActive = pathname === item.href;
@@ -116,9 +115,7 @@ function SidebarContent({
         })}
       </nav>
 
-      {/* User & Logout */}
       <div className="border-t border-gray-100">
-        {/* User Info */}
         <div className="flex items-center gap-2.5 px-4 py-4">
           <Link href="/profile" className="flex w-full items-center gap-2.5">
             {user?.avatar ? (
@@ -144,7 +141,6 @@ function SidebarContent({
           </Link>
         </div>
 
-        {/* Logout Button */}
         <div className="px-3 pb-4">
           <button
             onClick={() => {
