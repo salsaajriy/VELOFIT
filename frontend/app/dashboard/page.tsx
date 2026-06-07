@@ -91,8 +91,6 @@ export default function DashboardPage() {
               <p className="text-xs text-gray-400 font-medium mb-1">Calories</p>
               <p className="text-xl font-black text-gray-900">0 kcal</p>
             </div>
-
-            {/* Helmet Battery Card - Replace the static one */}
             <HelmetBatteryCard />
           </div>
         </div>

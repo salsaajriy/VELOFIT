@@ -12,18 +12,14 @@ return new class extends Migration {
             $table->foreignId('user_id')
                   ->constrained()
                   ->cascadeOnDelete();
+            $table->foreignId('helmet_id')->nullable()->constrained();
             $table->string('mode')->default('free');
-            $table->string('navigation_result')->nullable();
             $table->decimal('distance', 10, 3)->default(0); 
             $table->unsignedInteger('duration')->default(0); 
             $table->decimal('avg_speed', 6, 2)->default(0);   
             $table->decimal('max_speed', 6, 2)->default(0);   
             $table->decimal('calories', 8, 2)->default(0);    
             $table->string('status')->default('active');
-
-            $table->decimal('destination_lat', 10, 7)->nullable();
-            $table->decimal('destination_lng', 10, 7)->nullable();
-
             $table->decimal('start_lat', 10, 7)->nullable();
             $table->decimal('start_lng', 10, 7)->nullable();
             $table->decimal('end_lat', 10, 7)->nullable();
@@ -31,14 +27,6 @@ return new class extends Migration {
             $table->timestamp('started_at')->nullable();
             $table->timestamp('paused_at')->nullable();
             $table->timestamp('ended_at')->nullable();
-
-            $table->unsignedInteger('auto_paused_count')
-                  ->default(0);
-            $table->string('completed_reason')
-                  ->nullable();
-            $table->string('route_name')->nullable();
-            $table->string('source')->default('mobile');
-
             $table->timestamps();
  
             $table->index(['user_id', 'status']);

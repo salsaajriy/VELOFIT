@@ -4,6 +4,7 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 import { haversineDistance } from '@/lib/haversine';
 import { rideService } from '@/services/rideService';
 import type { RideStatus, RideMode, RidePoint, RideStats, ActiveRide } from '@/types/ride';
+import { helmetService } from '@/services/helmetService';
  
 const NOISE_THRESHOLD_M    = 2;     
 const BATCH_SIZE           = 5;     
@@ -236,13 +237,21 @@ export function useRideTracker(): UseRideTrackerReturn {
     setStatus('starting');
  
     if (!navigator.geolocation) {
-      setError('Browser tidak mendukung Geolocation.');
+      setError('Browser does not support Geolocation.');
       setStatus('idle');
       return;
     }
  
     try {
-      const ride = await rideService.startRide(mode);
+      const helmetId = await helmetService.getActiveHelmetId();
+      
+      if (!helmetId) {
+        throw new Error('No helmet selected. Please select a helmet before starting a ride.');
+      }
+
+      console.log('🚀 Starting ride with helmet ID:', helmetId);
+
+      const ride = await rideService.startRide(Number(helmetId), mode);
       setActiveRide({ id: ride.id, mode, status: 'starting', distance: 0, duration: 0, avg_speed: 0, max_speed: 0, calories: 0, started_at: ride.started_at });
       setStatus('tracking');
  
@@ -256,7 +265,7 @@ export function useRideTracker(): UseRideTrackerReturn {
  
       batchTimerRef.current = setInterval(flushBatch, BATCH_INTERVAL_MS);
     } catch (e: unknown) {
-      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Gagal memulai ride.');
+      setError((e as { response?: { data?: { message?: string } } })?.response?.data?.message ?? 'Failed to start ride.');
       setStatus('idle');
     }
   }, [handlePosition, handleGpsError, startTimer, flushBatch]);

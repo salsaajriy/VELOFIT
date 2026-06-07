@@ -20,7 +20,7 @@ return new class extends Migration {
                   ->nullable();
             $table->timestamp('recorded_at');
             $table->timestamps();
- 
+
             $table->index(['ride_id', 'recorded_at']);
         });
     }

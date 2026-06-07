@@ -73,7 +73,7 @@ export default function HelmetBatteryCard() {
     setIsLoading(true);
     setError(null);
     try {
-      const helmet = await helmetService.getActiveHelmet();
+      const helmet = await helmetService.getActiveHelmetId();
       setActiveHelmet(helmet);
     } catch (err) {
       console.error('Failed to fetch helmet:', err);
@@ -151,29 +151,29 @@ export default function HelmetBatteryCard() {
   return (
     <Link href="/helmets">
       <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
-            <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6">
-                <rect x="2" y="7" width="16" height="11" rx="2" stroke="#f59e0b" strokeWidth="2" />
-                <path d="M18 10h3a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-3" stroke="#f59e0b" strokeWidth="2" />
-                <rect x="4" y="10" width="8" height="5" rx="1" fill="#f59e0b" />
-            </svg>
         <div className="flex items-center justify-between mb-3">
-          <p className="text-xs text-gray-400 font-medium mb-1">Helmet Battery</p>
+          <p className="text-xs text-gray-400 font-medium">Helmet Battery</p>
+          <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6">
+            <rect x="2" y="7" width="16" height="11" rx="2" stroke="#f59e0b" strokeWidth="2" />
+            <path d="M18 10h3a1 0 0 1 1 1v3a1 0 0 1-1 1h-3" stroke="#f59e0b" strokeWidth="2" />
+            <rect x="4" y="10" width="8" height="5" rx="1" fill="#f59e0b" />
+          </svg>
         </div>
-        <div className="bg-gray-50 rounded-xl p-3 mb-3">
-            <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 min-w-0">
-                    <p className="text-sm font-black text-gray-900 truncate">
-                    {activeHelmet.deviceName}
-                    </p>
-                    <p className="text-[10px] text-gray-400 font-mono truncate">
-                    {activeHelmet.deviceId}
-                    </p>
-                </div>
+        <div className="bg-gray-50 rounded-xl p-3">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black text-gray-900 truncate">
+                {activeHelmet.deviceName}
+              </p>
+              <p className="text-[10px] text-gray-400 font-mono truncate">
+                {activeHelmet.deviceId}
+              </p>
             </div>
-            <div className="flex items-center justify-between mb-2">
-                <ConnectionBadge lastSeen={activeHelmet.lastSeen} />
-            </div>
-            <BatteryLevel level={activeHelmet.battery} />
+          </div>
+          <div className="flex items-center justify-between mb-2">
+            <ConnectionBadge lastSeen={activeHelmet.lastSeen} />
+          </div>
+          <BatteryLevel level={activeHelmet.battery} />
         </div>
       </div>
     </Link>

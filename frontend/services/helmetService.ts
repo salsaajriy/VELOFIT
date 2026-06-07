@@ -42,9 +42,20 @@ class HelmetService {
     }
   }
 
-  async getActiveHelmet(): Promise<Helmet | null> {
-    const helmets = await this.getHelmets();
-    return helmets.find(h => h.isActive) || helmets[0] || null;
+  async getActiveHelmetId(): Promise<Helmet | null> {
+    try {
+      const activeId = localStorage.getItem('activeHelmetId');
+      if (!activeId) return null;
+      
+      const response = await fetch(`/api/helmets/${activeId}`);
+      if (!response.ok) return null;
+      
+      const helmet = await response.json();
+      return helmet;
+    } catch (error) {
+      console.error('Error fetching active helmet:', error);
+      return null;
+    }
   }
 }
 

@@ -1,14 +1,13 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRideTracker } from '@/hooks/useRideTracker';
 import { RideStats } from '@/components/RideStats';
 import { RideControls } from '@/components/RideControls';
 import type { RideMode } from '@/types/ride';
+import { Helmet, helmetService } from '@/services/helmetService';
 import { 
-  Activity, 
-  Navigation, 
   MapPin, 
   Bike, 
   TrendingUp,
@@ -27,42 +26,19 @@ const RideMap = dynamic(
     loading: () => (
       <div className="h-100 md:h-125 bg-linear-to-br from-orange-50 to-orange-100 rounded-2xl animate-pulse flex flex-col items-center justify-center gap-3">
         <MapPin className="w-12 h-12 text-orange-300" />
-        <p className="text-orange-400 font-medium">Memuat peta...</p>
+        <p className="text-orange-400 font-medium">Maps Loading...</p>
       </div>
     ),
   }
 );
 
 export default function RidePage() {
-  const [mode, setMode] = useState<RideMode>('free');
-  const [showModeSelector, setShowModeSelector] = useState(true);
-  
-  const {
-    status,
-    stats,
-    currentPos,
-    trail,
-    elapsedTime,
-    startRide,
-    pauseRide,
-    resumeRide,
-    finishRide,
-    error,
-  } = useRideTracker();
-
+  const [mode] = useState<RideMode>('free');
+  const { status, stats, currentPos, trail, elapsedTime, startRide, pauseRide, resumeRide, finishRide, error, } = useRideTracker();
   const isIdle = status === 'idle' || status === 'completed';
   const isTracking = status === 'tracking' || status === 'paused';
   const isActive = status !== 'idle' && status !== 'completed';
-
-  const handleStartRide = () => {
-    startRide(mode);
-    setShowModeSelector(false);
-  };
-
-  const handleModeChange = (newMode: RideMode) => {
-    setMode(newMode);
-  };
-
+  const handleStartRide = () => { startRide(mode); };
   const formatElapsedTime = (seconds: number): string => {
     const hours = Math.floor(seconds / 3600);
     const minutes = Math.floor((seconds % 3600) / 60);
@@ -74,10 +50,46 @@ export default function RidePage() {
     return `${minutes}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const [helmets, setHelmets] = useState<Helmet[]>([]);
+  const [selectedHelmetId, setSelectedHelmetId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const loadHelmets = async () => {
+      const data = await helmetService.getHelmets();
+      setHelmets(data);
+
+      const activeId = localStorage.getItem('selectedHelmetId');
+      if (activeId && data.some(h => h.id === parseInt(activeId))) {
+        setSelectedHelmetId(parseInt(activeId));
+      } else if (data.length > 0) {
+        setSelectedHelmetId(data[0].id);
+        localStorage.setItem('selectedHelmetId', data[0].id.toString());
+      }
+    };
+    loadHelmets();
+  }, []);
+  
+  const handleSelectHelmet = (id: number) => {
+    setSelectedHelmetId(id);
+    localStorage.setItem('selectedHelmetId', id.toString());
+  };
+
   return (
     <div className="min-h-screen bg-linear-to-br from-orange-50 via-white to-orange-50/30">
-      {/* Header */}
       <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-orange-100 shadow-sm">
+      {helmets.length > 0 && (
+          <select
+            value={selectedHelmetId || ''}
+            onChange={(e) => handleSelectHelmet(parseInt(e.target.value))}
+            className="text-sm border border-gray-200 rounded-lg px-3 py-1.5 bg-white"
+          >
+            {helmets.map(helmet => (
+              <option key={helmet.id} value={helmet.id}>
+                {helmet.deviceName} {helmet.isActive ? '✓' : ''}
+              </option>
+            ))}
+          </select>
+        )}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -145,21 +157,18 @@ export default function RidePage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
         <div className="grid lg:grid-cols-3 gap-6">
-          {/* Left Column - Map and Main Content */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Welcome Banner (when idle) */}
             {isIdle && (
               <div className="bg-linear-to-r from-orange-500 to-orange-600 rounded-2xl p-6 text-white shadow-lg">
                 <h2 className="text-2xl font-bold mb-2">
                   Ready to Cycle?
                 </h2>
                 <p className="text-orange-100 text-sm">
-                  Choose a travel mode and start tracking your cycling activities
+                  Click the button below to begin tracking your cycling activities
                 </p>
               </div>
             )}
 
-            {/* Map Container */}
             <div className="bg-white rounded-2xl shadow-lg overflow-hidden border border-orange-100">
               <div className="px-4 py-3 border-b border-orange-100 bg-orange-50/30 flex items-center justify-between flex-wrap gap-2">
                 <div className="flex items-center gap-2 text-sm text-gray-600">

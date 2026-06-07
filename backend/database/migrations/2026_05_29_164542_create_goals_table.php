@@ -10,28 +10,22 @@ return new class extends Migration
     {
         Schema::create('goals', function (Blueprint $table) {
             $table->id();
-
             $table->foreignId('user_id')
                 ->constrained()
                 ->cascadeOnDelete();
-
             $table->enum('metric_type', [
                 'distance',
                 'calories',
                 'duration',
                 'rides',
             ]);
-
             $table->enum('period', [
                 'daily',
                 'weekly',
             ]);
-
             $table->decimal('target_value', 10, 2);
-
             $table->boolean('is_active')
                 ->default(true);
-
             $table->timestamps();
         });
     }

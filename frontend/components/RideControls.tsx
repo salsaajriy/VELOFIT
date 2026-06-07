@@ -1,7 +1,7 @@
 'use client';
 
 import type { RideStatus } from '@/types/ride';
-import { Play, Pause, Square, RotateCcw, Bike } from 'lucide-react';
+import { Play, Pause, Square, Bike } from 'lucide-react';
 
 interface RideControlsProps {
   status: RideStatus;

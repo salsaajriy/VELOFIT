@@ -3,7 +3,6 @@
 import { useEffect, useRef, memo } from 'react';
 import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import type { Coordinate } from '@/types/ride';
 
 const startIcon = new L.Icon({
   iconUrl: 'data:image/svg+xml;base64,' + btoa(`

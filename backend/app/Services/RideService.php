@@ -45,6 +45,7 @@ class RideService
  
     public function startRide(
         int $userId, 
+        int $helmetId,
         string $mode = 'free', 
         ?string $routeName = null,
         ?string $destinationLat = null,
@@ -73,6 +74,7 @@ class RideService
 
         return Ride::create([
             'user_id'    => $userId,
+            'helmet_id'  => $helmetId,
             'mode'       => $mode,
             'status'     => 'active',
             'started_at' => now(),

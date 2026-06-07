@@ -1,4 +1,4 @@
-export type RideMode = 'free' | 'navigation';
+export type RideMode = 'free';
 export type RideStatus =
   | 'idle'
   | 'starting'
@@ -81,11 +81,4 @@ export interface RouteInstruction {
   duration: number;
   instruction: string;
   type: number;
-}
-
-export interface Destination {
-  name: string;
-  lat: number;
-  lon: number;
-  display_name: string;
 }

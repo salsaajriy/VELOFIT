@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\{StartRideRequest, LocationRequest, FinishRideRequest};
 use App\Http\Resources\{RideResource, RideDetailResource, RideStatsResource};
-use App\Models\Ride;
+use App\Models\{Ride, Helmet};
 use App\Services\RideService;
 use Illuminate\Http\{JsonResponse, Request};
  
@@ -17,10 +17,8 @@ class RideController extends Controller
     {
         $ride = $this->rideService->startRide(
             userId: $request->user()->id,
+            helmetId: $request->input('helmet_id'),
             mode: $request->input('mode', 'free'),
-            routeName: $request->input('route_name'),
-            destinationLat: $request->input('destination_lat'),
-            destinationLng: $request->input('destination_lng'),
         );
  
         return response()->json([

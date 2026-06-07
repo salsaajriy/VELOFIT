@@ -138,7 +138,7 @@ export default function RecentRides() {
             </tr>
           </thead>
           <tbody>
-            {rides.map((ride, i) => {
+            {rides.map((ride) => {
               const statusInfo = STATUS_CONFIG[ride.status?.toLowerCase()] ?? STATUS_CONFIG.completed;
               
               return (
@@ -146,9 +146,6 @@ export default function RecentRides() {
                   <td className="px-6 py-4">
                     <p className="text-sm font-semibold text-gray-800">{formatDate(ride.started_at)}</p>
                     <p className="text-xs text-gray-400">{formatTime(ride.started_at)}</p>
-                  </td>
-                  <td className="px-6 py-4 text-sm text-gray-600">
-                    {ride.mode === 'navigation' ? 'Navigation Route' : 'Free Ride'}
                   </td>
                   <td className="px-6 py-4 text-sm font-bold text-gray-900">
                     {ride.distance ? `${ride.distance.toFixed(1)} km` : '—'}

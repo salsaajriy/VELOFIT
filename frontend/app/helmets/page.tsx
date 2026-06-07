@@ -1,10 +1,5 @@
 'use client';
 
-// app/helmets/page.tsx
-// ✅ Fixed: device_name (bukan name) di POST & PUT body
-// ✅ Fixed: connection field diambil dari lastSeen (< 30 detik = online)
-// ✅ Fixed: handleRename update state pakai deviceName (bukan name)
-
 import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/sidebar';
 
@@ -260,8 +255,6 @@ function PairModal({
   );
 }
 
-// ── Helmet Card ────────────────────────────────────────────────────────────
-
 function HelmetCard({
   helmet,
   onActivate,
@@ -438,8 +431,6 @@ function HelmetCard({
   );
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
-
 export default function ManageHelmetsPage() {
   const [helmets, setHelmets] = useState<Helmet[]>([]);
   const [loading, setLoading] = useState(true);
@@ -454,7 +445,7 @@ export default function ManageHelmetsPage() {
       const res = await apiFetch<ApiResponse<Helmet[]>>('/helmets');
       setHelmets(res.data);
     } catch {
-      // silent — keep showing existing data on polling error
+
     } finally {
       setLoading(false);
     }
@@ -466,18 +457,20 @@ export default function ManageHelmetsPage() {
     return () => clearInterval(interval);
   }, [fetchHelmets]);
 
-  // ✅ Fix: PATCH /helmets/{id}/activate
   const handleActivate = async (id: number) => {
     try {
       await apiFetch(`/helmets/${id}/activate`, { method: 'PATCH' });
       setHelmets((prev) => prev.map((h) => ({ ...h, isActive: h.id === id })));
-      showToast('Helm berhasil diaktifkan.', 'success');
+      
+        localStorage.setItem('selectedHelmetId', id.toString());
+        localStorage.setItem('activeHelmetName', helmets.find(h => h.id === id)?.deviceName || '');
+
+      showToast('Helm activated successfully.', 'success');
     } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : 'Gagal mengaktifkan helm.', 'error');
+      showToast(err instanceof Error ? err.message : 'Error occurred while activating helmet.', 'error');
     }
   };
 
-  // ✅ Fix: PUT body pakai device_name; state update pakai deviceName
   const handleRename = async (id: number, name: string) => {
     try {
       await apiFetch(`/helmets/${id}`, {

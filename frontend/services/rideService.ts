@@ -8,10 +8,10 @@ const api = axios.create({
  
 api.interceptors.request.use((config) => {
 
-  const token =
-    localStorage.getItem('token') ||         
-    localStorage.getItem('auth_token') ||    
-    localStorage.getItem('sanctum_token');    
+const token =
+  localStorage.getItem('token') ||         
+  localStorage.getItem('auth_token') ||    
+  localStorage.getItem('sanctum_token');    
 
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -20,8 +20,8 @@ api.interceptors.request.use((config) => {
 });
  
 export const rideService = {
-  async startRide(mode: RideMode) {
-    const { data } = await api.post('/rides/start', { mode });
+  async startRide(helmetId: number, mode: RideMode = 'free') {
+    const { data } = await api.post('/rides/start', { mode: mode, helmet_id: helmetId });
     return data.data as { id: number; started_at: string };
   },
  
