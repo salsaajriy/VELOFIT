@@ -20,9 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'role.admin' => CheckAdminRole::class,
             'role.user' => CheckUserRole::class,
         ]);
-
-        //
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+
     })->create();

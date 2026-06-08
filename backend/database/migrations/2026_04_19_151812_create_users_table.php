@@ -29,8 +29,8 @@ return new class extends Migration
             $table->string('name1')->nullable();
             $table->string('name2')->nullable();
 
-            $table->enum('role', ['user', 'admin'])
-                ->default('user');
+            $table->enum('role', ['user', 'admin'])->default('user');
+            $table->boolean('is_active')->default(true)->after('role');
 
             $table->rememberToken();
             $table->timestamps();

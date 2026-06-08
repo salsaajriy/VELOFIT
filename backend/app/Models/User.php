@@ -48,7 +48,7 @@ class User extends Authenticatable
         return $this->role === 'admin';
     }
 
-    public function rides(): HasMany
+    public function rides()
     {
         return $this->hasMany(Ride::class);
     }
@@ -56,5 +56,10 @@ class User extends Authenticatable
     public function goals()
     {
         return $this->hasMany(Goal::class);
+    }
+
+    public function helmet()
+    {
+        return $this->hasMany(Helmet::class);
     }
 }
