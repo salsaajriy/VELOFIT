@@ -10,7 +10,6 @@ import { MdEmail, MdLock } from "react-icons/md";
 import { AiTwotoneSafetyCertificate } from "react-icons/ai";
 import Footer from "@/components/footer";
 
-
 function IconEmail() {
   return (
     <MdEmail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
@@ -39,31 +38,27 @@ export default function Login() {
   const [error, setError] = useState("");
 
   const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
-
   const router = useRouter();
+
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
-    console.log("LOGIN CLICKED");
 
     try {
       const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json", // 🔥 WAJIB
+          "Accept": "application/json",
         },
         body: JSON.stringify(form),
       });
 
-      // 🔥 langsung coba ambil JSON
       let data;
       try {
         data = await res.json();
       } catch (err) {
-        // kalau gagal → berarti HTML
         const text = await res.text();
         console.error("NOT JSON RESPONSE:", text);
         throw new Error("Server error (bukan JSON)");
@@ -75,10 +70,19 @@ export default function Login() {
         throw new Error(data.message || "Login gagal");
       }
 
+      // Simpan token dan role
       localStorage.setItem("token", data.access_token);
+      localStorage.setItem("user_role", data.role);
+      localStorage.setItem("user_data", JSON.stringify(data.user));
 
-      console.log("LOGIN SUCCESS");
-      router.push("/dashboard");
+      console.log("LOGIN SUCCESS, ROLE:", data.role);
+
+      // Redirect berdasarkan role
+      if (data.role === "admin") {
+        router.push("/admin/dashboard");
+      } else {
+        router.push("/dashboard");
+      }
 
     } catch (err: unknown) {
       console.error("LOGIN ERROR:", err);
@@ -101,7 +105,7 @@ export default function Login() {
     } catch (error: unknown) {
       console.error('Google login error:', error);
     }
-  }
+  };
 
   return (
     <>
@@ -118,13 +122,12 @@ export default function Login() {
 
       <div className="min-h-screen flex flex-col font-dm" style={{ backgroundColor: "#f0ede8" }}>
 
-        {/* ── Navbar ──────────────────────────────────────── */}
         <nav
           className="sticky top-0 z-50 flex items-center justify-between h-16 px-8 md:px-12"
           style={{ 
             borderBottom: "1px solid #e8e4de",
             backgroundColor: "#f0ede8",
-           }}
+          }}
         >
           <span className="font-syne text-xl font-bold tracking-tight text-gray-900">
             Velofit
@@ -142,19 +145,20 @@ export default function Login() {
               className="font-dm text-sm font-semibold text-white px-5 py-2 rounded-md transition-colors"
               style={{ backgroundColor: "#b85c08" }}
               onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#9a4d06")}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#b85c08")}>
+              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#b85c08")}
+            >
               Sign Up
             </Link>
           </div>
         </nav>
 
         <main className="flex-1 grid grid-cols-1 lg:grid-cols-2 items-center gap-10 max-w-6xl w-full mx-auto py-14">
-          {/* kiri */}
           <section className="flex flex-col items-center text-center lg:items-start lg:text-left">
             <div className="flex items-center gap-3 mb-5">
               <span
                 className="font-dm text-[0.68rem] font-bold tracking-widest text-white px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: "#b8961a", letterSpacing: "0.08em" }}>
+                style={{ backgroundColor: "#b8961a", letterSpacing: "0.08em" }}
+              >
                 V1.0 VERSION
               </span>
               <span className="flex gap-1.5 items-center">
@@ -166,7 +170,8 @@ export default function Login() {
 
             <h1
               className="font-extrabold leading-[1.1] tracking-tight text-gray-900 mb-5"
-              style={{ fontSize: "clamp(2.3rem, 4vw, 3.1rem)" }}>
+              style={{ fontSize: "clamp(2.3rem, 4vw, 3.1rem)" }}
+            >
               Gear up for the<br />
               <span style={{ color: "#c45c0a" }}>next ride.</span>
             </h1>
@@ -190,7 +195,8 @@ export default function Login() {
 
             <p
               className="font-dm leading-relaxed text-gray-600 max-w-sm mb-8"
-              style={{ fontSize: "0.95rem" }}>
+              style={{ fontSize: "0.95rem" }}
+            >
               Access your helmet&apos;s telemetry, safety logs, and
               heads-up display preferences in one secure cockpit.
             </p>
@@ -293,7 +299,6 @@ export default function Login() {
                   </div>
                 </div>
 
-                {/* Remember */}
                 <label className="flex items-center gap-2.5 cursor-pointer select-none">
                   <input
                     type="checkbox"
@@ -307,7 +312,6 @@ export default function Login() {
                   </span>
                 </label>
 
-                {/* Submit */}
                 <button
                   type="submit"
                   disabled={loading}
@@ -315,17 +319,11 @@ export default function Login() {
                   style={{
                     background: "linear-gradient(90deg, #e05a2b 0%, #f0a500 100%)",
                   }}
-                  onMouseOver={(e) => {
-                    if (!loading) e.currentTarget.style.opacity = "0.9";
-                  }}
-                  onMouseOut={(e) => {
-                    e.currentTarget.style.opacity = "1";
-                  }}>
+                >
                   {loading ? "Signing in..." : "Login to Dashboard"}
                 </button>
               </form>
 
-              {/* Divider */}
               <div className="flex items-center gap-3 my-6">
                 <span className="flex-1 h-px" style={{ backgroundColor: "#e0ddd8" }} />
                 <span
@@ -337,32 +335,23 @@ export default function Login() {
                 <span className="flex-1 h-px" style={{ backgroundColor: "#e0ddd8" }} />
               </div>
 
-              {/* Google */}
               <button
                 type="button"
                 onClick={handleGoogleLogin}
                 className="w-full flex items-center justify-center gap-2.5 bg-white rounded-xl py-3 font-dm text-[0.92rem] font-medium text-gray-800 transition-all"
                 style={{ border: "1.5px solid #e0ddd8" }}
-                onMouseOver={(e) => {
-                  e.currentTarget.style.backgroundColor = "#f8f6f3";
-                  e.currentTarget.style.borderColor = "#c8c4be";
-                }}
-                onMouseOut={(e) => {
-                  e.currentTarget.style.backgroundColor = "#ffffff";
-                  e.currentTarget.style.borderColor = "#e0ddd8";
-                }}
               >
                 <FcGoogle size={20} />
                 Google
               </button>
 
-              {/* Register */}
               <p className="text-center font-dm text-[0.88rem] mt-5" style={{ color: "#7a7a7a" }}>
                 New to Velofit?{" "}
                 <Link
                   href="/registration"
                   className="font-bold transition-opacity hover:opacity-75"
-                  style={{ color: "#c45c0a" }}>
+                  style={{ color: "#c45c0a" }}
+                >
                   Create an account
                 </Link>
               </p>
@@ -371,7 +360,6 @@ export default function Login() {
         </main>
         <Footer />
       </div>
-     
     </>
   );
 }
