@@ -23,6 +23,25 @@ class Helmet extends Model
         'last_ping' => 'datetime',
     ];
 
+    protected function getStatusAttribute(): string
+    {
+        if (!$this->is_active) {
+            return 'inactive';
+        }
+        
+        if ($this->last_ping && $this->last_ping->diffInMinutes(now()) > 10) {
+            return 'offline';
+        }
+        
+        if ($this->battery < 20) {
+            return 'low_battery';
+        }
+        
+        return 'online';
+    }
+
+    protected $appends = ['status'];
+
     public function user()
     {
         return $this->belongsTo(User::class);

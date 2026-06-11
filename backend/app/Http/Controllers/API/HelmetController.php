@@ -115,4 +115,36 @@ class HelmetController extends Controller
             'batteryLow' => $helmet->battery < 20,
         ];
     }
+
+    public function adminIndex(Request $request): JsonResponse
+    {
+        $helmets = Helmet::with(['user' => function($query) {
+            $query->select('id', 'name', 'email');
+        }])->orderByDesc('is_active')
+        ->orderByDesc('last_ping')
+        ->get()
+        ->map(function($helmet) {
+            return [
+                'id' => $helmet->id,
+                'device_id' => $helmet->device_id,
+                'device_name' => $helmet->device_name,
+                'battery' => $helmet->battery,
+                'battery_low' => $helmet->battery < 20,
+                'is_active' => (bool) $helmet->is_active,
+                'last_ping' => $helmet->last_ping?->toIso8601String(),
+                'status' => $helmet->status,
+                'owner' => $helmet->user ? [
+                    'id' => $helmet->user->id,
+                    'name' => $helmet->user->name,
+                    'email' => $helmet->user->email,
+                ] : null,
+            ];
+        });
+        
+        return response()->json([
+            'status' => true,
+            'total' => $helmets->count(),
+            'data' => $helmets,
+        ]);
+    }
 }

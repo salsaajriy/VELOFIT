@@ -39,11 +39,13 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/dashboard', [UserController::class, 'dashboard']);
         Route::get('/profile', [ProfileController::class, 'show']);
         Route::post('/profile', [ProfileController::class, 'update']);
+        
     });
 
     Route::prefix('admin')->middleware('role.admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard']);
         Route::get('/users', [UserController::class, 'index']);
+        Route::get('/helmets', [HelmetController::class, 'adminIndex']);
     });
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);

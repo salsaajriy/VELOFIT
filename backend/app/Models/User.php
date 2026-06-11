@@ -58,7 +58,7 @@ class User extends Authenticatable
         return $this->hasMany(Goal::class);
     }
 
-    public function helmet()
+    public function helmets()
     {
         return $this->hasMany(Helmet::class);
     }
