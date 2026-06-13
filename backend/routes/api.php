@@ -35,11 +35,11 @@ Route::post('/iot/location', [IoTController::class, 'receiveData']);
 //----------------------------------------------------------------
 Route::middleware('auth:sanctum')->group(function () {
     
+    Route::get('user/profile', [ProfileController::class, 'show']);
+    Route::post('user/profile', [ProfileController::class, 'update']);
+    
     Route::prefix('user')->middleware('role.user')->group(function () {
         Route::get('/dashboard', [UserController::class, 'dashboard']);
-        Route::get('/profile', [ProfileController::class, 'show']);
-        Route::post('/profile', [ProfileController::class, 'update']);
-        
     });
 
     Route::prefix('admin')->middleware('role.admin')->group(function () {

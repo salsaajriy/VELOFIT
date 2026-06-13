@@ -27,6 +27,7 @@ class ProfileController extends Controller
         $user->update($data);
 
         return response()->json([
+            'status' => true,
             'message' => 'Profile updated successfully.',
             'data' => $user
         ]);
@@ -38,7 +39,10 @@ class ProfileController extends Controller
         
         $userData = $user->toArray();
         $userData['age'] = $user->birth_date ? Carbon::parse($user->birth_date)->age : null;
-        
-        return response()->json($userData);
+        return response()->json([
+            'status' => true,
+            'message' => 'User profile information',
+            'data' => $userData
+        ]);
     }
 }
