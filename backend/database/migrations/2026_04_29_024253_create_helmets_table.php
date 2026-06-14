@@ -10,20 +10,23 @@ return new class extends Migration
     {
         Schema::create('helmets', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('device_id')->unique();
-            $table->string('device_name');
-            $table->unsignedTinyInteger('battery')->default(0);
-            $table->boolean('is_active')->default(false);
-            $table->timestamp('last_ping')->nullable();
-            $table->timestamps();
 
-            $table->index(['user_id', 'is_active']);
+            $table->foreignId('user_id')
+                ->constrained()
+                ->cascadeOnDelete();
+            $table->string('helmet_name');
+            $table->string('bluetooth_device_name')
+                ->unique();
+            $table->boolean('is_active')
+                ->default(false);
+            $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('helmets');
+        Schema::table('helmets', function (Blueprint $table) {
+            $table->dropColumn(['bluetooth_device_name']);
+        });
     }
 };

@@ -2,36 +2,39 @@
 
 namespace App\Http\Resources;
 
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
 class RideDetailResource extends JsonResource
 {
-    public function toArray($request): array
+    public function toArray(Request $request): array
     {
         return [
-            ...(new RideResource($this->resource))
-                ->toArray($request),
-
-            'locations' => $this->locations->map(
-                fn ($loc) => [
-                    'id' => $loc->id,
-                    'lat' => $loc->latitude,
-                    'lng' => $loc->longitude,
-                    'speed' => $loc->speed,
-                    'altitude' => $loc->altitude,
-                    'accuracy' => $loc->accuracy,
-                    'recorded_at' => $loc->recorded_at?->toISOString(),
-                ]
+            'id'         => $this->id,
+            'helmet'     => new HelmetResource($this->whenLoaded('helmet')),
+            'start_time' => $this->start_time->toISOString(),
+            'end_time'   => $this->end_time?->toISOString(),
+            'duration'   => $this->duration,
+            'distance'   => $this->distance,
+            'avg_speed'  => $this->avg_speed,
+            'max_speed'  => $this->max_speed,
+            'calories'   => $this->calories,
+            'status'     => $this->status,
+            'route'      => $this->whenLoaded('locations', fn () =>
+                $this->locations->map(fn ($l) => [
+                    'lat'         => $l->latitude,
+                    'lon'         => $l->longitude,
+                    'recorded_at' => $l->recorded_at->toISOString(),
+                ])
             ),
-
-            'alerts' => $this->alerts->map(
-                fn ($alert) => [
-                    'id' => $alert->id,
-                    'type' => $alert->type,
-                    'message' => $alert->message,
-                    'acknowledged' => $alert->acknowledged,
-                    'created_at' => $alert->created_at?->toISOString(),
-                ]
+            'sensor_readings' => $this->whenLoaded('sensorReadings', fn () =>
+                $this->sensorReadings->map(fn ($s) => [
+                    'body_temperature' => $s->body_temperature,
+                    'room_temperature' => $s->room_temperature,
+                    'impact_g'         => $s->impact_g,
+                    'alert_state'      => $s->alert_state,
+                    'recorded_at'      => $s->recorded_at->toISOString(),
+                ])
             ),
         ];
     }

@@ -5,36 +5,27 @@ namespace App\Services;
 use App\Models\Ride;
 use App\Models\RideLocation;
 use App\Models\RideAlert;
+use App\Models\SensorReading;
 use App\Models\User;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 use Illuminate\Validation\ValidationException;
  
 class RideService
 {
-    private function calculateDistanceMeters(
-        float $lat1,
-        float $lng1,
-        float $lat2,
-        float $lng2
-    ): float
-    {
-        $earthRadius = 6371000;
+    public function haversineDistance(
+        float $lat1, float $lon1,
+        float $lat2, float $lon2
+    ): float {
+        $earthRadius = 6371.0;
 
         $dLat = deg2rad($lat2 - $lat1);
-        $dLng = deg2rad($lng2 - $lng1);
+        $dLon = deg2rad($lon2 - $lon1);
 
-        $a =
-            sin($dLat / 2) * sin($dLat / 2) +
-            cos(deg2rad($lat1)) *
-            cos(deg2rad($lat2)) *
-            sin($dLng / 2) *
-            sin($dLng / 2);
+        $a = sin($dLat / 2) ** 2
+           + cos(deg2rad($lat1)) * cos(deg2rad($lat2)) * sin($dLon / 2) ** 2;
 
-        $c = 2 * atan2(
-            sqrt($a),
-            sqrt(1 - $a)
-        );
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
 
         return $earthRadius * $c;
     }
@@ -42,14 +33,35 @@ class RideService
     public function __construct(
         private readonly RideStatsService $statsService
     ) {}
+
+    public function storeSensorPayload(Ride $ride, array $payload): void
+    {
+        $now = Carbon::now();
+
+        // GPS only stored when signal is valid
+        if ($payload['gpsOk'] && $payload['lat'] != 0.0 && $payload['lon'] != 0.0) {
+            RideLocation::create([
+                'ride_id'     => $ride->id,
+                'latitude'    => $payload['lat'],
+                'longitude'   => $payload['lon'],
+                'recorded_at' => $now,
+            ]);
+        }
+
+        SensorReading::create([
+            'ride_id'          => $ride->id,
+            'helmet_id'        => $payload['helmet_id'],
+            'body_temperature' => $payload['body'],
+            'room_temperature' => $payload['room'],
+            'impact_g'         => $payload['g'],
+            'alert_state'      => $payload['alert'],
+            'recorded_at'      => $now,
+        ]);
+    }
  
     public function startRide(
         int $userId, 
         int $helmetId,
-        string $mode = 'free', 
-        ?string $routeName = null,
-        ?string $destinationLat = null,
-        ?string $destinationLng = null
         ): Ride
     {
         $activeRide = Ride::where('user_id', $userId)
@@ -75,12 +87,8 @@ class RideService
         return Ride::create([
             'user_id'    => $userId,
             'helmet_id'  => $helmetId,
-            'mode'       => $mode,
             'status'     => 'active',
-            'started_at' => now(),
-            'route_name' => $routeName,
-            'destination_lat' => $destinationLat,
-            'destination_lng' => $destinationLng,
+            'start_time' => now(),
         ]);
     }
  
@@ -128,77 +136,53 @@ class RideService
         return $ride->fresh();
     }
  
-    public function finishRide(Ride $ride, array $finalStats): Ride
+    public function finaliseRide(Ride $ride): Ride
     {
-        $lastLocation = $ride->locations()->latest('recorded_at')->first();
-
+        $endTime = Carbon::now();
+        
+  
         $ride->loadMissing('user');
-        if (!$ride->user?->weight) {
+        
+        if (!$ride->user || !$ride->user->weight) {
             throw ValidationException::withMessages([
                 'weight' => [
-                    'User weight is required to calculate calories.'
+                    'User weight is required to calculate calories. Please update your profile.'
                 ]
             ]);
         }
-
+        
         $userWeight = $ride->user->weight;
+        
+        // Calculate total distance from GPS locations
+        $locations = $ride->locations()->orderBy('recorded_at')->get();
+        $distance  = $this->calculateTotalDistance($locations); 
 
-        $avgSpeed = $this->statsService->calculateAverageSpeed(
-            distanceKm: $finalStats['distance'],
-            durationSeconds: $finalStats['duration']
-        );
+        $duration = $endTime->diffInSeconds($ride->start_time);
+        
+        $avgSpeed = $duration > 0 ? ($distance / ($duration / 3600)) : 0;
+        
+        $maxSpeed = $this->calculateMaxSpeed($locations);
 
         $calories = $this->statsService->calculateCalories(
-            durationSeconds: $finalStats['duration'],
+            durationSeconds: $duration,
             weightKg: $userWeight,
             avgSpeed: $avgSpeed,
-            distanceKm: $finalStats['distance']
+            distanceKm: $distance
         );
-
-        $navigationResult = null;
-        if (
-            $ride->mode === 'navigation' &&
-            $ride->destination_lat &&
-            $ride->destination_lng &&
-            $lastLocation
-        ) {
-            $distanceToDestination =
-                $this->calculateDistanceMeters(
-                    $lastLocation->latitude,
-                    $lastLocation->longitude,
-                    $ride->destination_lat,
-                    $ride->destination_lng
-                );
-
-            $navigationResult =
-                $distanceToDestination <= 30
-                    ? 'completed'
-                    : 'uncompleted';
-        }
-
+        
         $ride->update([
-            'status'     => 'completed',
-            'navigation_result' => $navigationResult,
-            'ended_at'   => now(),
-            'distance'   => $finalStats['distance'],
-            'duration'   => $finalStats['duration'],
-            'avg_speed'  => $avgSpeed,
-            'max_speed'  => $finalStats['max_speed'],
-            'end_lat'    => $lastLocation?->latitude,
-            'end_lng'    => $lastLocation?->longitude,
-            'calories'   => $calories,
+            'end_time'  => $endTime,
+            'duration'  => $duration,
+            'distance'  => round($distance, 4),
+            'avg_speed' => round($avgSpeed, 2),
+            'max_speed' => round($maxSpeed, 2),
+            'calories'  => $calories,
+            'status'    => 'completed',
         ]);
- 
-        return $ride->fresh(['locations', 'alerts']);
+        
+        return $ride->fresh();
     }
 
-    public function getUserHistory(int $userId, int $perPage = 10)
-    {
-        return Ride::where('user_id', $userId)
-            ->where('status', 'completed')
-            ->orderByDesc('started_at')
-            ->paginate($perPage);
-    }
 
     public function getRideDetail(int $rideId, int $userId): ?Ride
     {
@@ -217,45 +201,51 @@ class RideService
         return $ride->delete();
     }
 
-    public function getStats(int $userId): array
+    private function calculateTotalDistance(Collection $locations): float
     {
-        $completedRides = Ride::query()
-            ->where('user_id', $userId)
-            ->where('status', 'completed');
+        $total = 0.0;
+        $prev  = null;
 
-        $totalDistance = (float) $completedRides->sum('distance');
-        $totalDuration = (int) $completedRides->sum('duration');
-        $totalCalories = (float) $completedRides->sum('calories');
+        foreach ($locations as $loc) {
+            if ($prev !== null) {
+                $total += $this->haversineDistance(
+                    $prev->latitude, $prev->longitude,
+                    $loc->latitude,  $loc->longitude
+                );
+            }
+            $prev = $loc;
+        }
 
-        $totalRides = Ride::query()
-            ->where('user_id', $userId)
-            ->where('status', 'completed')
-            ->count();
-
-        $weeklyDistance = Ride::query()
-            ->where('user_id', $userId)
-            ->where('status', 'completed')
-            ->whereBetween('started_at', [
-                Carbon::now()->startOfWeek(),
-                Carbon::now()->endOfWeek(),
-            ])
-            ->sum('distance');
-
-        $monthlyDistance = Ride::query()
-            ->where('user_id', $userId)
-            ->where('status', 'completed')
-            ->whereMonth('started_at', now()->month)
-            ->whereYear('started_at', now()->year)
-            ->sum('distance');
-
-        return [
-            'total_rides' => $totalRides,
-            'total_distance' => round($totalDistance, 2),
-            'total_duration' => $totalDuration,
-            'total_calories' => round($totalCalories, 2),
-
-            'weekly_distance' => round($weeklyDistance, 2),
-            'monthly_distance' => round($monthlyDistance, 2),
-        ];
+        return $total;
     }
+
+    private function calculateMaxSpeed(Collection $locations): float
+    {
+        $max  = 0.0;
+        $prev = null;
+
+        foreach ($locations as $loc) {
+            if ($prev !== null) {
+                $dist = $this->haversineDistance(
+                    $prev->latitude, $prev->longitude,
+                    $loc->latitude,  $loc->longitude
+                );
+                // Time between readings in hours
+                $timeDiff = abs(
+                    $loc->recorded_at->diffInSeconds($prev->recorded_at)
+                ) / 3600;
+
+                if ($timeDiff > 0) {
+                    $speed = $dist / $timeDiff;
+                    if ($speed > $max) {
+                        $max = $speed;
+                    }
+                }
+            }
+            $prev = $loc;
+        }
+
+        return $max;
+    }
+
 }

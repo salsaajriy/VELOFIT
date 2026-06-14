@@ -58,18 +58,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('/{id}',          [HelmetController::class, 'destroy']);
     });
 
+    Route::prefix('helmets')->group(function () {
+        Route::get('/',                    [HelmetController::class, 'index']);
+        Route::post('/',                   [HelmetController::class, 'store']);
+        Route::delete('/{helmet}',         [HelmetController::class, 'destroy']);
+        Route::post('/validate-connection',[HelmetController::class, 'validateConnection']);
+    });
+
     Route::prefix('rides')->group(function () {
-        Route::post('/start',    [RideController::class, 'start']);
-        Route::post('/location', [RideController::class, 'location']);
-        Route::get('/active',    [RideController::class, 'active']);
-        Route::get('/history',   [RideController::class, 'history']);
-        Route::get('/stats',     [RideController::class, 'stats']);
-        Route::delete('/{ride}',    [RideController::class, 'destroy']);
-    
-        Route::post('/{ride}/pause',  [RideController::class, 'pause']);
-        Route::post('/{ride}/resume', [RideController::class, 'resume']);
-        Route::post('/{ride}/finish', [RideController::class, 'finish']);
-        Route::get('/{ride}',         [RideController::class, 'show']);
+        Route::post('/start',                          [RideController::class, 'start']);
+        Route::post('/{ride}/sensor-data',             [RideController::class, 'storeSensorData']);
+        Route::get('/active',                          [RideController::class, 'active']);
+        Route::post('/{ride}/finish',                  [RideController::class, 'finish']);
+        Route::get('/history',                         [RideController::class, 'history']);
+        Route::get('/{ride}',                          [RideController::class, 'show']);
+
     });
 
     Route::get('/goals/progress', [GoalController::class, 'progress']);

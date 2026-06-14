@@ -3,148 +3,104 @@
 namespace App\Http\Controllers\API;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreHelmetRequest;
+use App\Http\Requests\ValidateHelmetConnectionRequest;
+use App\Http\Resources\HelmetResource;
 use App\Models\Helmet;
-use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 class HelmetController extends Controller
 {
+    /**
+     * GET /api/helmets
+     * List all helmets registered to the authenticated user.
+     */
     public function index(Request $request): JsonResponse
     {
-        $helmets = Helmet::where('user_id', $request->user()->id)
-            ->orderByDesc('is_active')
-            ->get()
-            ->map(fn($h) => $this->formatHelmet($h));
+        $helmets = $request->user()
+                           ->helmets()
+                           ->orderBy('created_at')
+                           ->get();
 
-        return response()->json(['data' => $helmets]);
+        return response()->json([
+            'data' => HelmetResource::collection($helmets),
+        ]);
     }
 
-    public function store(Request $request): JsonResponse
+    /**
+     * POST /api/helmets
+     * Register a helmet and attach it to the user.
+     * Creates the helmet record if it doesn't exist yet.
+     */
+    public function store(StoreHelmetRequest $request): JsonResponse
     {
-        $request->validate([
-            'device_id' => 'required|string|unique:helmets,device_id',
-            'device_name' => 'required|string|max:100',
-        ]);
+        $exists = Helmet::where('user_id', $request->user()->id)
+            ->where('bluetooth_device_name', $request->bluetooth_device_name)
+            ->exists();
+
+        if ($exists) {
+            return response()->json([
+                'message' => 'Helmet is already registered to your account.'
+            ], 409);
+        }
 
         $helmet = Helmet::create([
-            'user_id'   => $request->user()->id,
-            'device_id' => $request->device_id,
-            'device_name' => $request->device_name,
-            'battery'   => 0,
-            'connection'=> 'offline',
+            'user_id' => $request->user()->id,
+            'helmet_name' => $request->helmet_name,
+            'bluetooth_device_name' => $request->bluetooth_device_name,
             'is_active' => false,
         ]);
 
         return response()->json([
-            'message' => 'Helmet paired successfully.',
-            'data'    => $this->formatHelmet($helmet),
+            'message' => 'Helmet registered successfully.',
+            'data' => new HelmetResource($helmet),
         ], 201);
     }
 
-    public function update(Request $request, int $id): JsonResponse
+    /**
+     * DELETE /api/helmets/{helmet}
+     * Remove helmet from user's account (does not delete the helmet record).
+     */
+    public function destroy(Request $request, Helmet $helmet): JsonResponse
     {
-        $helmet = Helmet::where('user_id', $request->user()->id)->findOrFail($id);
 
-        $request->validate([
-            'device_name' => 'required|string|max:100',
-        ]);
+    if ($helmet->user_id !== $request->user()->id) {
+        return response()->json([
+            'message' => 'Helmet not found in your account'
+        ], 403);
+    }
 
-        $helmet->update(['device_name' => $request->device_name]);
+    $helmet->delete();
 
         return response()->json([
-            'message' => 'Helmet updated.',
-            'data'    => $this->formatHelmet($helmet->fresh()),
+            'message' => 'Helmet removed from your account.',
         ]);
     }
 
-    public function activate(Request $request, int $id): JsonResponse
+    /**
+     * POST /api/helmets/validate-connection
+     * Validate that a BLE device name belongs to one of the user's helmets.
+     * Called after BLE connection is established on frontend.
+     */
+    public function validateConnection(ValidateHelmetConnectionRequest $request): JsonResponse
     {
-        $helmet = Helmet::where('user_id', $request->user()->id)->findOrFail($id);
+        $helmet = $request->user()
+                          ->helmets()
+                          ->where('bluetooth_device_name', $request->bluetooth_device_name)
+                          ->first();
 
-        Helmet::where('user_id', $request->user()->id)->update(['is_active' => false]);
-
-        $helmet->update(['is_active' => true]);
-
-        return response()->json([
-            'message' => "Helmet '{$helmet->device_name}' is now active.",
-            'data'    => $this->formatHelmet($helmet->fresh()),
-        ]);
-    }
-
-    public function destroy(Request $request, int $id): JsonResponse
-    {
-        $helmet = Helmet::where('user_id', $request->user()->id)->findOrFail($id);
-        $helmet->delete();
-
-        return response()->json(['message' => 'Helmet unpaired successfully.']);
-    }
-
-    public function receiveData(Request $request): JsonResponse
-    {
-        $request->validate([
-            'device_id' => 'required|string',
-            'battery'   => 'required|integer|between:0,100',
-        ]);
-
-        $helmet = Helmet::where('device_id', $request->device_id)->first();
-
-        if (!$helmet) {
-            Log::warning('Unknown device sent data', ['device_id' => $request->device_id]);
-            return response()->json(['message' => 'Device not registered.'], 404);
+        if (! $helmet) {
+            return response()->json([
+                'valid'   => false,
+                'message' => 'This helmet is not registered to your account.',
+            ], 403);
         }
 
-        $helmet->update([
-            'battery'    => $request->battery,
-            'last_ping'  => now(),
-        ]);
-
-        return response()->json(['message' => 'Data received.']);
-    }
-
-    private function formatHelmet(Helmet $helmet): array
-    {
-        return [
-            'id'         => $helmet->id,
-            'deviceId'   => $helmet->device_id,
-            'deviceName' => $helmet->device_name,
-            'battery'    => $helmet->battery,
-            'isActive'   => $helmet->is_active,
-            'lastPing'   => $helmet->last_ping?->toIso8601String(),
-            'batteryLow' => $helmet->battery < 20,
-        ];
-    }
-
-    public function adminIndex(Request $request): JsonResponse
-    {
-        $helmets = Helmet::with(['user' => function($query) {
-            $query->select('id', 'name', 'email');
-        }])->orderByDesc('is_active')
-        ->orderByDesc('last_ping')
-        ->get()
-        ->map(function($helmet) {
-            return [
-                'id' => $helmet->id,
-                'device_id' => $helmet->device_id,
-                'device_name' => $helmet->device_name,
-                'battery' => $helmet->battery,
-                'battery_low' => $helmet->battery < 20,
-                'is_active' => (bool) $helmet->is_active,
-                'last_ping' => $helmet->last_ping?->toIso8601String(),
-                'status' => $helmet->status,
-                'owner' => $helmet->user ? [
-                    'id' => $helmet->user->id,
-                    'name' => $helmet->user->name,
-                    'email' => $helmet->user->email,
-                ] : null,
-            ];
-        });
-        
         return response()->json([
-            'status' => true,
-            'total' => $helmets->count(),
-            'data' => $helmets,
+            'valid'   => true,
+            'message' => 'Helmet connected successfully.',
+            'data'    => new HelmetResource($helmet),
         ]);
     }
 }

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -51,6 +52,11 @@ class User extends Authenticatable
     public function rides()
     {
         return $this->hasMany(Ride::class);
+    }
+
+    public function activeRide(): HasOne
+    {
+        return $this->hasOne(Ride::class)->where('status', 'active')->latest();
     }
 
     public function goals()

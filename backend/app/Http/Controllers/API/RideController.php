@@ -1,166 +1,157 @@
 <?php
- 
-namespace App\Http\Controllers\Api;
- 
+
+namespace App\Http\Controllers\API;
+
 use App\Http\Controllers\Controller;
-use App\Http\Requests\{StartRideRequest, LocationRequest, FinishRideRequest};
-use App\Http\Resources\{RideResource, RideDetailResource, RideStatsResource};
-use App\Models\{Ride, Helmet};
+use App\Http\Requests\StartRideRequest;
+use App\Http\Requests\StoreSensorDataRequest;
+use App\Http\Resources\RideDetailResource;
+use App\Http\Resources\RideResource;
+use App\Models\Ride;
 use App\Services\RideService;
-use Illuminate\Http\{JsonResponse, Request};
- 
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
 class RideController extends Controller
 {
-    public function __construct(private readonly RideService $rideService) {}
+    public function __construct(private RideService $rideService) {}
 
     public function start(StartRideRequest $request): JsonResponse
     {
-        $ride = $this->rideService->startRide(
-            userId: $request->user()->id,
-            helmetId: $request->input('helmet_id'),
-            mode: $request->input('mode', 'free'),
-        );
- 
-        return response()->json([
-            'success' => true,
-            'data'    => new RideResource($ride),
-            'message' => 'Ride dimulai.',
-        ], 201);
-    }
- 
-    public function location(LocationRequest $request): JsonResponse
-    {
-        $ride = Ride::query()
-            ->where('user_id', $request->user()->id)
-            ->active()
-            ->latest()
-            ->firstOrFail();
- 
-        $this->rideService->saveLocations($ride, $request->input('locations'));
- 
-        return response()->json(['success' => true, 'message' => 'Lokasi disimpan.']);
-    }
+        // Block if user already has an active ride
+        $existing = $request->user()
+                            ->rides()
+                            ->where('status', 'active')
+                            ->first();
 
-    public function pause(Request $request, Ride $ride): JsonResponse
-    {
-        if ($ride->user_id !== $request->user()->id) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-        }
-        $updated = $this->rideService->pauseRide($ride);
-
-        return response()->json([
-            'success' => true,
-            'data'    => new RideResource($updated),
-        ]);
-    }
-
-    public function resume(Request $request, Ride $ride): JsonResponse
-    {
-        if ($ride->user_id !== $request->user()->id) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-        }
-        $updated = $this->rideService->resumeRide($ride);
-
-        return response()->json([
-            'success' => true,
-            'data'    => new RideResource($updated),
-        ]);
-    }
-
-    public function finish(FinishRideRequest $request, Ride $ride): JsonResponse
-    {
-        if ($ride->user_id !== $request->user()->id) {
-            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
-        }
-
-        $finalStats = $request->only(['distance', 'duration', 'avg_speed', 'max_speed', 'calories']);
-        
-        $finalRide = $this->rideService->finishRide(
-            $ride,
-            $finalStats
-        );
-
-        return response()->json([
-            'success' => true,
-            'data'    => new RideDetailResource($finalRide),
-            'message' => 'Ride selesai!',
-        ]);
-    }
- 
-    public function history(Request $request): JsonResponse
-    {
-        $history = $this->rideService->getUserHistory(
-            userId: $request->user()->id,
-            perPage: (int) $request->query('per_page', 10)
-        );
- 
-        return response()->json([
-            'success' => true,
-            'data'    => RideResource::collection($history),
-            'meta'    => [
-                'current_page' => $history->currentPage(),
-                'last_page'    => $history->lastPage(),
-                'total'        => $history->total(),
-            ],
-        ]);
-    }
- 
-    public function show(Request $request, int $rideId): JsonResponse
-    {
-        $ride = $this->rideService->getRideDetail($rideId, $request->user()->id);
- 
-        if (!$ride) {
-            return response()->json(['success' => false, 'message' => 'Ride tidak ditemukan.'], 404);
-        }
- 
-        return response()->json([
-            'success' => true,
-            'data'    => new RideDetailResource($ride),
-        ]);
-    }
-
-    public function destroy(Request $request, Ride $ride): JsonResponse
-    {
-        if ($ride->user_id !== $request->user()->id) {
+        if ($existing) {
             return response()->json([
-                'success' => false,
-                'message' => 'Unauthorized'
+                'message' => 'You already have an active ride.',
+                'data'    => new RideResource($existing),
+            ], 409);
+        }
+
+        // Verify the helmet belongs to the user
+        $ownsHelmet = $request->user()
+                              ->helmets()
+                              ->where('id', $request->helmet_id)
+                              ->exists();
+
+        if (! $ownsHelmet) {
+            return response()->json([
+                'message' => 'Helmet does not belong to your account.',
             ], 403);
         }
 
-        $ride->delete();
+        $ride = Ride::create([
+            'user_id'    => $request->user()->id,
+            'helmet_id'  => $request->helmet_id,
+            'start_time' => now(),
+            'status'     => 'active',
+        ]);
 
         return response()->json([
-            'success' => true,
-            'message' => 'Successfully deleted the ride.'
+            'message' => 'Ride started.',
+            'data'    => new RideResource($ride->load('helmet')),
+        ], 201);
+    }
+
+    /**
+     * POST /api/rides/{ride}/sensor-data
+     * Accept one BLE payload, split and store into ride_locations + sensor_readings.
+     */
+    public function storeSensorData(StoreSensorDataRequest $request, Ride $ride): JsonResponse
+    {
+        // Ownership check
+        if ($ride->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        if ($ride->status !== 'active') {
+            return response()->json(['message' => 'Ride is not active.'], 422);
+        }
+
+        $this->rideService->storeSensorPayload($ride, $request->validated());
+
+        return response()->json(['message' => 'Sensor data stored.']);
+    }
+
+    public function finish(Request $request, Ride $ride): JsonResponse
+    {
+        if ($ride->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        if ($ride->status !== 'active') {
+            return response()->json(['message' => 'Ride is already completed.'], 422);
+        }
+
+        $finished = $this->rideService->finaliseRide($ride);
+
+        return response()->json([
+            'message' => 'Ride finished.',
+            'data'    => new RideResource($finished->load('helmet')),
         ]);
     }
 
     public function active(Request $request): JsonResponse
     {
-        $ride = Ride::query()
-            ->where('user_id', $request->user()->id)
-            ->active()
-            ->latest()
-            ->first();
+        $ride = $request->user()
+                        ->rides()
+                        ->where('status', 'active')
+                        ->with('helmet')
+                        ->first();
+
+        if (! $ride) {
+            return response()->json(['data' => null]);
+        }
+
+        return response()->json(['data' => new RideResource($ride)]);
+    }
+
+    public function history(Request $request): JsonResponse
+    {
+        $rides = $request->user()
+                         ->rides()
+                         ->where('status', 'completed')
+                         ->with('helmet')
+                         ->orderByDesc('start_time')
+                         ->paginate(15);
 
         return response()->json([
-            'success' => true,
-            'data' => $ride
-                ? new RideResource($ride)
-                : null,
+            'data' => RideResource::collection($rides),
+            'meta' => [
+                'current_page' => $rides->currentPage(),
+                'last_page'    => $rides->lastPage(),
+                'total'        => $rides->total(),
+            ],
         ]);
     }
 
-    public function stats(Request $request): JsonResponse
+    public function show(Request $request, Ride $ride): JsonResponse
     {
-        $stats = $this->rideService->getStats(
-            $request->user()->id
-        );
+        if ($ride->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Forbidden.'], 403);
+        }
+
+        $ride->load(['helmet', 'locations', 'sensorReadings']);
 
         return response()->json([
-            'success' => true,
-            'data' => new RideStatsResource($stats),
+            'data' => new RideDetailResource($ride),
+        ]);
+    }
+
+    public function cancel(Request $request): JsonResponse
+    {
+        $ride = Ride::where('user_id', $request->user()->id)
+            ->where('status', 'active')
+            ->firstOrFail();
+
+        $ride->update(['status' => 'cancelled']);
+
+        return response()->json([
+            'status' => true,
+            'message' => 'Ride cancelled successfully',
         ]);
     }
 }

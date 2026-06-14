@@ -8,11 +8,14 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('ride_locations', function (Blueprint $table) {
+        Schema::create('sensor_readings', function (Blueprint $table) {
             $table->id();
             $table->foreignId('ride_id')->constrained()->cascadeOnDelete();
-            $table->decimal('latitude', 10, 6);
-            $table->decimal('longitude', 10, 6);
+            $table->foreignId('helmet_id')->constrained()->cascadeOnDelete();
+            $table->decimal('body_temperature', 5, 2)->nullable();
+            $table->decimal('room_temperature', 5, 2)->nullable();
+            $table->decimal('impact_g', 6, 3)->nullable();
+            $table->unsignedTinyInteger('alert_state')->default(0);
             $table->timestamp('recorded_at')->useCurrent();
 
             $table->index(['ride_id', 'recorded_at']);
@@ -21,6 +24,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('ride_locations');
+        Schema::dropIfExists('sensor_readings');
     }
 };

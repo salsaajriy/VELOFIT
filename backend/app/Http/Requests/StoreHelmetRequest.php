@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StartRideRequest extends FormRequest
+class StoreHelmetRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,7 +14,8 @@ class StartRideRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'helmet_id' => ['required', 'integer', 'exists:helmets,id'],
+            'helmet_name'           => ['required', 'string', 'max:100'],
+            'bluetooth_device_name' => ['required', 'string', 'max:50'],
         ];
     }
 }

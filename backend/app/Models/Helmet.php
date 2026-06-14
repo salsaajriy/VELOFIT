@@ -3,47 +3,34 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Casts\Attribute;
-use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Helmet extends Model
 {
     protected $fillable = [
         'user_id',
-        'device_id',
-        'device_name',
-        'battery',
+        'helmet_name',
+        'bluetooth_device_name',
         'is_active',
-        'last_ping',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'battery'   => 'integer',
-        'last_ping' => 'datetime',
     ];
 
-    protected function getStatusAttribute(): string
-    {
-        if (!$this->is_active) {
-            return 'inactive';
-        }
-        
-        if ($this->last_ping && $this->last_ping->diffInMinutes(now()) > 10) {
-            return 'offline';
-        }
-        
-        if ($this->battery < 20) {
-            return 'low_battery';
-        }
-        
-        return 'online';
-    }
-
-    protected $appends = ['status'];
-
-    public function user()
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function rides(): HasMany
+    {
+        return $this->hasMany(Ride::class);
+    }
+
+    public function sensorReadings(): HasMany
+    {
+        return $this->hasMany(SensorReading::class)->orderBy('recorded_at');
     }
 }
