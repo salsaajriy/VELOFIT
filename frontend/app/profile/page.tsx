@@ -22,14 +22,15 @@ export default function ProfilePage() {
   });
 
   const router = useRouter();
-  const [isChecking, setIsChecking] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   const BACKEND_URL = "http://127.0.0.1:8000";
 
   const [bmiData, setBmiData] = useState({
     bmi: 0,
     category: '',
-    color: '',
+    color: '#3b82f6',
     advice: '',
     idealWeightRange: '',
   });
@@ -37,6 +38,11 @@ export default function ProfilePage() {
   const fetchProfile = async () => {
     try {
       const token = localStorage.getItem("token");
+      if (!token) {
+        router.push("/login");
+        return;
+      }
+
       const res = await fetch(`${BACKEND_URL}/api/user/profile`, {
         headers: {
           Accept: "application/json",
@@ -50,40 +56,74 @@ export default function ProfilePage() {
         return;
       }
 
-      const data = await res.json();
-      console.log("PROFILE:", data);
+      const response = await res.json();
+      console.log("PROFILE RESPONSE:", response);
+      
+      // Ambil data dari response.data (karena backend membungkus dengan { status, data })
+      const profileData = response.data || response;
 
       setForm({
-        displayName: data.name || '',
-        weight: data.weight || '',
-        height: data.height || '',
-        birthDate: data.birth_date || '',
-        age: data.age || '',
-        gender: data.gender || 'male',
-        contact1: data.contact1 || '',
-        contact2: data.contact2 || '',
-        name1: data.name1 || '',
-        name2: data.name2 || '',
+        displayName: profileData.name || '',
+        weight: profileData.weight ? String(profileData.weight) : '',
+        height: profileData.height ? String(profileData.height) : '',
+        birthDate: profileData.birth_date || '',
+        age: profileData.age ? String(profileData.age) : '',
+        gender: profileData.gender || 'male',
+        contact1: profileData.contact1 || '',
+        contact2: profileData.contact2 || '',
+        name1: profileData.name1 || '',
+        name2: profileData.name2 || '',
       });
 
-      if (data.avatar) {
-        setAvatar(data.avatar);
+      if (profileData.avatar) {
+        setAvatar(profileData.avatar);
       }
 
-      if (data.weight && data.height) {
-        calculateBMI(data.weight, data.height);
+      // Hitung BMI dengan data yang sudah diparsing
+      if (profileData.weight && profileData.height) {
+        const weightNum = typeof profileData.weight === 'string' ? parseFloat(profileData.weight) : profileData.weight;
+        const heightNum = typeof profileData.height === 'string' ? parseFloat(profileData.height) : profileData.height;
+        
+        if (!isNaN(weightNum) && !isNaN(heightNum) && weightNum > 0 && heightNum > 0) {
+          calculateBMI(weightNum, heightNum);
+        }
       }
     } catch (err) {
       console.error("FETCH PROFILE ERROR:", err);
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // Fungsi hitung BMI dan dapatkan status
+  // Fungsi hitung BMI dan dapatkan status (DIPERBAIKI)
   const calculateBMI = (weight: number, height: number) => {
-    if (!weight || !height || height === 0) return;
+    // Validasi input
+    if (!weight || !height || height === 0 || isNaN(weight) || isNaN(height)) {
+      setBmiData({
+        bmi: 0,
+        category: '',
+        color: '#3b82f6',
+        advice: 'Please enter valid weight and height values',
+        idealWeightRange: '',
+      });
+      return;
+    }
     
     const heightInMeters = height / 100;
     const bmiValue = weight / (heightInMeters * heightInMeters);
+    
+    // Cek jika hasil perhitungan tidak valid
+    if (isNaN(bmiValue) || !isFinite(bmiValue)) {
+      setBmiData({
+        bmi: 0,
+        category: '',
+        color: '#3b82f6',
+        advice: 'Invalid weight or height values',
+        idealWeightRange: '',
+      });
+      return;
+    }
+    
     const roundedBMI = Math.round(bmiValue * 10) / 10;
     
     let category = '';
@@ -94,35 +134,35 @@ export default function ProfilePage() {
     // Kategori BMI berdasarkan standar Asia/WHO
     if (bmiValue < 18.5) {
       category = 'Underweight';
-      color = '#3b82f6'; // blue
+      color = '#3b82f6';
       advice = 'You are below the healthy weight range. Consider increasing calorie intake with nutritious foods and consult a nutritionist.';
       const minIdeal = 18.5 * (heightInMeters * heightInMeters);
       const maxIdeal = 24.9 * (heightInMeters * heightInMeters);
       idealWeightRange = `${minIdeal.toFixed(1)} - ${maxIdeal.toFixed(1)} kg`;
     } else if (bmiValue >= 18.5 && bmiValue < 23) {
       category = 'Normal (Optimal)';
-      color = '#22c55e'; // green
+      color = '#22c55e';
       advice = 'Great! You are in the healthy weight range. Maintain this with balanced diet and regular exercise.';
       const minIdeal = 18.5 * (heightInMeters * heightInMeters);
       const maxIdeal = 24.9 * (heightInMeters * heightInMeters);
       idealWeightRange = `${minIdeal.toFixed(1)} - ${maxIdeal.toFixed(1)} kg`;
     } else if (bmiValue >= 23 && bmiValue < 27.5) {
       category = 'Overweight';
-      color = '#f59e0b'; // amber
+      color = '#f59e0b';
       advice = 'You are slightly above the healthy weight range. Small changes in diet and increased physical activity can help.';
       const minIdeal = 18.5 * (heightInMeters * heightInMeters);
       const maxIdeal = 24.9 * (heightInMeters * heightInMeters);
       idealWeightRange = `${minIdeal.toFixed(1)} - ${maxIdeal.toFixed(1)} kg`;
     } else if (bmiValue >= 27.5 && bmiValue < 30) {
       category = 'Obese Class I';
-      color = '#ef4444'; // red
+      color = '#ef4444';
       advice = 'You are in the obese category. We strongly recommend consulting a healthcare provider for a personalized weight management plan.';
       const minIdeal = 18.5 * (heightInMeters * heightInMeters);
       const maxIdeal = 24.9 * (heightInMeters * heightInMeters);
       idealWeightRange = `${minIdeal.toFixed(1)} - ${maxIdeal.toFixed(1)} kg`;
     } else if (bmiValue >= 30) {
       category = 'Obese Class II';
-      color = '#dc2626'; // dark red
+      color = '#dc2626';
       advice = 'You are in the severely obese category. Please consult a healthcare professional immediately for proper medical guidance.';
       const minIdeal = 18.5 * (heightInMeters * heightInMeters);
       const maxIdeal = 24.9 * (heightInMeters * heightInMeters);
@@ -138,10 +178,24 @@ export default function ProfilePage() {
     });
   };
 
-  // Update BMI saat weight atau height berubah
+  // Update BMI saat weight atau height berubah (DIPERBAIKI)
   useEffect(() => {
     if (form.weight && form.height) {
-      calculateBMI(parseFloat(form.weight), parseFloat(form.height));
+      const weightNum = parseFloat(form.weight);
+      const heightNum = parseFloat(form.height);
+      
+      if (!isNaN(weightNum) && !isNaN(heightNum) && weightNum > 0 && heightNum > 0) {
+        calculateBMI(weightNum, heightNum);
+      } else {
+        // Reset BMI jika input tidak valid
+        setBmiData({
+          bmi: 0,
+          category: '',
+          color: '#3b82f6',
+          advice: 'Please enter valid weight and height values',
+          idealWeightRange: '',
+        });
+      }
     }
   }, [form.weight, form.height]);
 
@@ -153,7 +207,6 @@ export default function ProfilePage() {
         return;
       }
       await fetchProfile();
-      setIsChecking(false);
     };
     init();
   }, []);
@@ -172,11 +225,12 @@ export default function ProfilePage() {
   };
 
   const handleSave = async () => {
+    setIsSaving(true);
     try {
       const token = localStorage.getItem("token");
       console.log("KIRIM:", form);
       
-        let formattedBirthDate = null;
+      let formattedBirthDate = null;
       if (form.birthDate) {
         formattedBirthDate = form.birthDate;
       }
@@ -190,10 +244,10 @@ export default function ProfilePage() {
         },
         body: JSON.stringify({
           name: form.displayName,
-          weight: Number(form.weight),
-          height: Number(form.height),
+          weight: form.weight ? Number(form.weight) : null,
+          height: form.height ? Number(form.height) : null,
           birth_date: formattedBirthDate,
-          age: Number(form.age),
+          age: form.age ? Number(form.age) : null,
           gender: form.gender,
           contact1: form.contact1,
           contact2: form.contact2,
@@ -202,23 +256,38 @@ export default function ProfilePage() {
         }),
       });
 
-      const data = await res.json();
+      const response = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.message || "Gagal update");
+        throw new Error(response.message || "Gagal update");
       }
 
       setSaved(true);
-      await fetchProfile();
+      await fetchProfile(); // Refresh data setelah update
       setTimeout(() => setSaved(false), 2500);
     } catch (err) {
       console.error("SAVE ERROR:", err);
+    } finally {
+      setIsSaving(false);
     }
   };
 
-  if (isChecking) return null;
+  // Loading state yang lebih baik
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen bg-gray-50">
+        <Sidebar />
+        <main className="flex-1 lg:ml-52 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading profile...</p>
+          </div>
+        </main>
+      </div>
+    );
+  }
 
-  const bmiProgress = Math.min(Math.max(((bmiData.bmi - 10) / 30) * 100, 0), 100);
+  const bmiProgress = bmiData.bmi > 0 ? Math.min(Math.max(((bmiData.bmi - 10) / 30) * 100, 0), 100) : 0;
 
   return (
     <div className="flex min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
@@ -235,7 +304,7 @@ export default function ProfilePage() {
               <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8">
                 <div className="flex items-center gap-6 mb-8">
                   <div className="relative shrink-0">
-                    <div className="relative w-28 h-28 rounded-2xl overflow-hidden bg-gradient-to-br from-gray-700 to-gray-900 shadow-lg">
+                    <div className="relative w-28 h-28 rounded-2xl overflow-hidden bg-linear-to-br from-gray-700 to-gray-900 shadow-lg">
                       {avatar ? (
                         <Image
                           src={avatar}
@@ -293,12 +362,11 @@ export default function ProfilePage() {
                       />
                     </Field>
                     
-                    <Field label="Age">
+                    <Field label="Birth Date">
                       <input
                         type="date"
                         value={form.birthDate}
                         onChange={handleChange('birthDate')}
-                        placeholder="MM/DD/YYYY"
                         className={inputCls}
                       />
                     </Field>
@@ -426,10 +494,16 @@ export default function ProfilePage() {
                 <div className="flex justify-end mt-8">
                   <button
                     onClick={handleSave}
-                    className="px-7 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 hover:shadow-lg flex items-center gap-2"
+                    disabled={isSaving}
+                    className="px-7 py-3 rounded-xl font-bold text-white transition-all hover:opacity-90 hover:shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     style={{ background: saved ? '#22c55e' : 'linear-gradient(135deg, #c2440a, #b83208)' }}
                   >
-                    {saved ? (
+                    {isSaving ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        Saving...
+                      </>
+                    ) : saved ? (
                       <>
                         <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-4 h-4">
                           <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
@@ -454,11 +528,11 @@ export default function ProfilePage() {
                   <h3 className="text-lg font-black text-gray-900">Body Mass Index</h3>
                 </div>
 
-                {form.weight && form.height ? (
+                {form.weight && form.height && bmiData.bmi > 0 ? (
                   <>
                     <div className="text-center mb-4">
                       <div className="text-5xl font-black mb-1" style={{ color: bmiData.color }}>
-                        {bmiData.bmi}
+                        {bmiData.bmi.toFixed(1)}
                       </div>
                       <div className="text-sm font-semibold px-3 py-1 rounded-full inline-block" 
                            style={{ backgroundColor: `${bmiData.color}15`, color: bmiData.color }}>
@@ -491,21 +565,25 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Ideal Weight Range */}
-                    <div className="bg-gray-50 rounded-xl p-3 mb-4">
-                      <div className="text-xs text-gray-500 mb-1">Ideal Weight Range</div>
-                      <div className="font-semibold text-gray-800">{bmiData.idealWeightRange}</div>
-                      <div className="text-xs text-gray-400 mt-1">for height {form.height} cm</div>
-                    </div>
+                    {bmiData.idealWeightRange && (
+                      <div className="bg-gray-50 rounded-xl p-3 mb-4">
+                        <div className="text-xs text-gray-500 mb-1">Ideal Weight Range</div>
+                        <div className="font-semibold text-gray-800">{bmiData.idealWeightRange}</div>
+                        <div className="text-xs text-gray-400 mt-1">for height {form.height} cm</div>
+                      </div>
+                    )}
 
                     {/* Health Advice */}
-                    <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-3 border border-amber-100">
-                      <div className="flex gap-2">
-                        <svg className="w-5 h-5 text-amber-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <p className="text-xs text-gray-700 leading-relaxed">{bmiData.advice}</p>
+                    {bmiData.advice && (
+                      <div className="bg-linear-to-r from-amber-50 to-orange-50 rounded-xl p-3 border border-amber-100">
+                        <div className="flex gap-2">
+                          <svg className="w-5 h-5 text-amber-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <p className="text-xs text-gray-700 leading-relaxed">{bmiData.advice}</p>
+                        </div>
                       </div>
-                    </div>
+                    )}
 
                     {/* Health Stats Summary */}
                     <div className="mt-4 pt-4 border-t border-gray-100">

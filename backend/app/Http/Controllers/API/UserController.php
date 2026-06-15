@@ -34,7 +34,7 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $users = User::with(['helmets' => function($query) {
-            $query->select('id', 'user_id', 'device_id', 'device_name', 'battery', 'is_active', 'last_ping');
+            $query->select('id', 'user_id', 'helmet_name', 'is_active');
         }])->select('id', 'name', 'email', 'role', 'created_at')
           ->get();
         
@@ -49,20 +49,16 @@ class UserController extends Controller
                 'helmets' => $user->helmets->map(function($helmet) {
                     return [
                         'id' => $helmet->id,
-                        'device_id' => $helmet->device_id,
-                        'device_name' => $helmet->device_name,
-                        'battery' => $helmet->battery,
-                        'battery_low' => $helmet->battery < 20,
+                        'helmet_name' => $helmet->helmet_name,
+                        // 'battery' => $helmet->battery,
+                        // 'battery_low' => $helmet->battery < 20,
                         'is_active' => (bool) $helmet->is_active,
-                        'last_ping' => $helmet->last_ping?->toIso8601String(),
-                        'status' => $this->getHelmetStatus($helmet),
                     ];
                 }),
                 'has_helmet' => $user->helmets->count() > 0,
                 'active_helmet' => $user->helmets->where('is_active', true)->first() 
                     ? [
-                        'device_name' => $user->helmets->where('is_active', true)->first()->device_name,
-                        'battery' => $user->helmets->where('is_active', true)->first()->battery,
+                        'helmet_name' => $user->helmets->where('is_active', true)->first()->helmet_name,
                     ] 
                     : null,
             ];
@@ -87,13 +83,9 @@ class UserController extends Controller
             return 'inactive';
         }
         
-        if ($helmet->last_ping && $helmet->last_ping->diffInMinutes(now()) > 10) {
-            return 'offline';
-        }
-        
-        if ($helmet->battery < 20) {
-            return 'low_battery';
-        }
+        // if ($helmet->battery < 20) {
+        //     return 'low_battery';
+        // }
         
         return 'online';
     }

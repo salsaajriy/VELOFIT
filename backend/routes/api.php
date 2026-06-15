@@ -15,7 +15,7 @@ use App\Http\Controllers\API\GoalController;
 //------------------------------------------------------------------
 Route::prefix('auth')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login', [AuthController::class, 'login'])
+    Route::post('/login',    [AuthController::class, 'login'])
         ->middleware('throttle:5,1');;
 
     Route::get('/google', [AuthController::class, 'redirectToGoogle'])
@@ -35,7 +35,7 @@ Route::post('/iot/location', [IoTController::class, 'receiveData']);
 //----------------------------------------------------------------
 Route::middleware('auth:sanctum')->group(function () {
     
-    Route::get('user/profile', [ProfileController::class, 'show']);
+    Route::get('user/profile',  [ProfileController::class, 'show']);
     Route::post('user/profile', [ProfileController::class, 'update']);
     
     Route::prefix('user')->middleware('role.user')->group(function () {
@@ -44,8 +44,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::prefix('admin')->middleware('role.admin')->group(function () {
         Route::get('/dashboard', [AdminController::class, 'dashboard']);
-        Route::get('/users', [UserController::class, 'index']);
-        Route::get('/helmets', [HelmetController::class, 'adminIndex']);
+        Route::get('/users',     [UserController::class, 'index']);
+        Route::get('/helmets',   [HelmetController::class, 'adminIndex']);
     });
 
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -61,6 +61,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::prefix('helmets')->group(function () {
         Route::get('/',                    [HelmetController::class, 'index']);
         Route::post('/',                   [HelmetController::class, 'store']);
+        Route::put('/{helmet}',            [HelmetController::class, 'update']);
+        Route::patch('/{helmet}/activate', [HelmetController::class, 'activate']);
         Route::delete('/{helmet}',         [HelmetController::class, 'destroy']);
         Route::post('/validate-connection',[HelmetController::class, 'validateConnection']);
     });

@@ -129,14 +129,14 @@ function SidebarContent({
               />
             ) : (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-200 text-sm font-bold text-amber-700">
-                {user?.name?.charAt(0) || 'A'}
+                {user?.name?.charAt(0) || 'U'}
               </div>
             )}
             <div>
               <p className="text-sm font-semibold leading-tight text-gray-800">
-                {user?.name || '...'}
+                {user?.name || 'Loading...'}
               </p>
-              <p className="text-xs text-gray-400">{user?.role || 'Pro Rider'}</p>
+              <p className="text-xs text-gray-400">{user?.role || 'User'}</p>
             </div>
           </Link>
         </div>
@@ -161,6 +161,7 @@ function SidebarContent({
 export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<{ name: string; role: string; avatar?: string } | null>(null);
+  const [loading, setLoading] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
 
@@ -172,6 +173,7 @@ export default function Sidebar() {
           router.push('/login');
           return;
         }
+        
         const res = await fetch("http://127.0.0.1:8000/api/user/profile", {
           headers: {
             Accept: "application/json",
@@ -185,11 +187,21 @@ export default function Sidebar() {
           return;
         }
 
-        const data = await res.json();
-        setUser(data);
-
+        const response = await res.json();
+        console.log("SIDEBAR RESPONSE:", response);
+        
+        // PERBAIKAN: Ambil data dari response.data
+        const userData = response.data || response;
+        
+        setUser({
+          name: userData.name || 'User',
+          role: userData.role || 'user',
+          avatar: userData.avatar || null,
+        });
       } catch (err) {
         console.error("SIDEBAR USER ERROR:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -200,7 +212,6 @@ export default function Sidebar() {
     try {
       const token = localStorage.getItem("token");
       if (token) {
-        // Optional: Call logout endpoint to invalidate token on server
         await fetch("http://127.0.0.1:8000/api/auth/logout", {
           method: 'POST',
           headers: {
@@ -212,14 +223,53 @@ export default function Sidebar() {
         });
       }
     } finally {
-      // Clear local storage
       localStorage.removeItem("token");
-      // Clear user state
       setUser(null);
-      // Redirect to login page
       router.push('/login');
     }
   };
+
+  // Loading state
+  if (loading) {
+    return (
+      <>
+        {/* Desktop Sidebar Loading */}
+        <aside className="fixed z-20 hidden h-full w-52 shrink-0 flex-col border-r border-gray-100 bg-white lg:flex">
+          <div className="flex h-full flex-col">
+            <div className="border-b border-gray-100 px-4 py-5">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-xl bg-gray-200 animate-pulse"></div>
+                <div className="h-4 w-16 bg-gray-200 rounded animate-pulse"></div>
+              </div>
+            </div>
+            <div className="flex-1 px-3 py-4 space-y-2">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-10 bg-gray-200 rounded-xl animate-pulse"></div>
+              ))}
+            </div>
+            <div className="border-t border-gray-100 p-4">
+              <div className="flex items-center gap-2.5">
+                <div className="h-8 w-8 rounded-full bg-gray-200 animate-pulse"></div>
+                <div className="flex-1">
+                  <div className="h-3 w-20 bg-gray-200 rounded animate-pulse mb-1"></div>
+                  <div className="h-2 w-12 bg-gray-200 rounded animate-pulse"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </aside>
+        
+        {/* Mobile Top Bar Loading */}
+        <header className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center justify-between border-b border-gray-100 bg-white px-4 lg:hidden">
+          <div className="flex items-center gap-2.5">
+            <div className="h-7 w-7 rounded-lg bg-gray-200 animate-pulse"></div>
+            <div className="h-3 w-12 bg-gray-200 rounded animate-pulse"></div>
+          </div>
+          <div className="h-5 w-5 bg-gray-200 rounded animate-pulse"></div>
+        </header>
+      </>
+    );
+  }
 
   return (
     <>

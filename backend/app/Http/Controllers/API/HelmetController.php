@@ -58,10 +58,6 @@ class HelmetController extends Controller
         ], 201);
     }
 
-    /**
-     * DELETE /api/helmets/{helmet}
-     * Remove helmet from user's account (does not delete the helmet record).
-     */
     public function destroy(Request $request, Helmet $helmet): JsonResponse
     {
 
@@ -101,6 +97,66 @@ class HelmetController extends Controller
             'valid'   => true,
             'message' => 'Helmet connected successfully.',
             'data'    => new HelmetResource($helmet),
+        ]);
+    }
+
+    public function update(Request $request, $id): JsonResponse
+    {
+        // Cari helmet berdasarkan ID
+        $helmet = Helmet::find($id);
+        
+        if (!$helmet) {
+            return response()->json(['message' => 'Helmet not found'], 404);
+        }
+        
+        if ($helmet->user_id !== $request->user()->id) {
+            return response()->json(['message' => 'Helmet not found in your account'], 403);
+        }
+
+        // Validate request
+        $validated = $request->validate([
+            'helmet_name' => 'required|string|max:100',
+        ]);
+
+        // Update helmet name
+        $helmet->update($validated);
+        
+        // Refresh model
+        $helmet->fresh();
+
+        return response()->json([
+            'message' => 'Helmet name updated successfully.',
+            'data' => $helmet
+        ]);
+    }
+
+    public function adminIndex(Request $request): JsonResponse
+    {
+        $helmets = Helmet::with(['user' => function($query) {
+            $query->select('id', 'name', 'email');
+        }])
+        ->orderByDesc('is_active')
+        ->orderByDesc('created_at')
+        ->get()
+        ->map(function($helmet) {
+            return [
+                'id' => $helmet->id,
+                'helmet_name' => $helmet->helmet_name,
+                'bluetooth_device_name' => $helmet->bluetooth_device_name,
+                'is_active' => (bool) $helmet->is_active,
+                'created_at' => $helmet->created_at->toIso8601String(),
+                'owner' => $helmet->user ? [
+                    'id' => $helmet->user->id,
+                    'name' => $helmet->user->name,
+                    'email' => $helmet->user->email,
+                ] : null,
+            ];
+        });
+        
+        return response()->json([
+            'status' => true,
+            'total' => $helmets->count(),
+            'data' => $helmets,
         ]);
     }
 }
