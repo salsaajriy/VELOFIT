@@ -2,39 +2,17 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/sidebar';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000/api';
-
-function getToken(): string {
-  if (typeof window === 'undefined') return '';
-  return localStorage.getItem('token') ?? '';
-}
-
-async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-      Authorization: `Bearer ${getToken()}`,
-      ...(options.headers ?? {}),
-    },
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.message ?? `API error ${res.status}`);
-  return data as T;
-}
+import { api } from '@/services/api';
+import { useBLE } from '@/hooks/useBLE';
+import type { Helmet } from '@/types';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
 type ConnectionStatus = 'connected' | 'offline';
 
-interface Helmet {
-  id: number;
-  deviceId: string;
-  deviceName: string;
-  battery: number;
+interface HelmetWithStatus extends Helmet {
   isActive: boolean;
+  battery: number;
   lastSeen: string | null;
   batteryLow: boolean;
 }
@@ -42,12 +20,6 @@ interface Helmet {
 interface ApiResponse<T> {
   data: T;
   message?: string;
-}
-
-function getConnectionStatus(lastSeen: string | null): ConnectionStatus {
-  if (!lastSeen) return 'offline';
-  const diff = Date.now() - new Date(lastSeen).getTime();
-  return diff < 30_000 ? 'connected' : 'offline';
 }
 
 // ── Toast ──────────────────────────────────────────────────────────────────
@@ -68,7 +40,7 @@ function Toast({ toast, onDone }: { toast: ToastState; onDone: () => void }) {
 
   return (
     <div
-      className={`fixed bottom-6 right-6 z-100 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold text-white transition-all animate-slide-up ${
+      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-sm font-semibold text-white transition-all animate-slide-up ${
         toast.type === 'success' ? 'bg-emerald-500' : 'bg-red-500'
       }`}
     >
@@ -159,24 +131,17 @@ function PairModal({
   onPaired: (helmet: Helmet) => void;
   onToast: (msg: string, type: ToastType) => void;
 }) {
-  const [deviceId, setDeviceId] = useState('');
-  const [deviceName, setDeviceName] = useState('');
+  const [helmetName, setHelmetName] = useState('');
+  const [bleName, setBleName] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async () => {
-    if (!deviceId.trim() || !deviceName.trim()) return;
+    if (!helmetName.trim() || !bleName.trim()) return;
     setLoading(true);
     try {
-      // ✅ Fix: gunakan device_name (sesuai backend validation)
-      const res = await apiFetch<ApiResponse<Helmet>>('/helmets', {
-        method: 'POST',
-        body: JSON.stringify({
-          device_id: deviceId.trim(),
-          device_name: deviceName.trim(),
-        }),
-      });
-      onPaired(res.data);
-      onToast(`"${res.data.deviceName}" successfully paired.`, 'success');
+      const newHelmet = await api.registerHelmet(helmetName.trim(), bleName.trim());
+      onPaired(newHelmet);
+      onToast(`"${helmetName}" successfully paired.`, 'success');
       onClose();
     } catch (err: unknown) {
       onToast(err instanceof Error ? err.message : 'Failed to pair helmet.', 'error');
@@ -207,35 +172,35 @@ function PairModal({
 
         <div className="space-y-4">
           <div>
-            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">DEVICE ID</label>
+            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">HELMET NAME</label>
             <input
               type="text"
-              value={deviceId}
-              onChange={(e) => setDeviceId(e.target.value)}
-              placeholder="e.g. VF-20250001"
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+              value={helmetName}
+              onChange={(e) => setHelmetName(e.target.value)}
+              placeholder="e.g. VELOFIT Helmet A"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
             />
-            <p className="text-[11px] text-gray-400 mt-1.5">
-              Check the ID on the sticker inside the helmet or in the device app.
-            </p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">HELM NAME</label>
+            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">BLE DEVICE NAME</label>
             <input
               type="text"
-              value={deviceName}
-              onChange={(e) => setDeviceName(e.target.value)}
-              placeholder="e.g. Helm Merah Utama"
+              value={bleName}
+              onChange={(e) => setBleName(e.target.value)}
+              placeholder="e.g. VELOFIT-12AB"
               onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100 transition-all"
+              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
             />
+            <p className="text-[11px] text-gray-400 mt-1.5">
+              Enter the exact BLE device name from your ESP32.
+            </p>
           </div>
 
           <div className="flex gap-2 pt-1">
             <button
               onClick={handleSubmit}
-              disabled={loading || !deviceId.trim() || !deviceName.trim()}
+              disabled={loading || !helmetName.trim() || !bleName.trim()}
               className="flex-1 py-3 rounded-lg font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
               style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
             >
@@ -261,21 +226,23 @@ function HelmetCard({
   onRename,
   onDelete,
 }: {
-  helmet: Helmet;
+  helmet: HelmetWithStatus;
   onActivate: (id: number) => Promise<void>;
   onRename: (id: number, name: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
 }) {
   const [editingName, setEditingName] = useState(false);
-  const [editName, setEditName] = useState(helmet.deviceName);
+  const [editName, setEditName] = useState(helmet.helmet_name);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [loadingActivate, setLoadingActivate] = useState(false);
   const [loadingDelete, setLoadingDelete] = useState(false);
 
-  const connection = getConnectionStatus(helmet.lastSeen);
+  const connection: ConnectionStatus = helmet.lastSeen 
+    ? (new Date().getTime() - new Date(helmet.lastSeen).getTime() < 30000 ? 'connected' : 'offline')
+    : 'offline';
 
   const commitRename = async () => {
-    if (editName.trim() && editName.trim() !== helmet.deviceName) {
+    if (editName.trim() && editName.trim() !== helmet.helmet_name) {
       await onRename(helmet.id, editName.trim());
     }
     setEditingName(false);
@@ -340,9 +307,9 @@ function HelmetCard({
                 />
               ) : (
                 <>
-                  <span className="text-sm font-black text-gray-900 truncate">{helmet.deviceName}</span>
+                  <span className="text-sm font-black text-gray-900 truncate">{helmet.helmet_name}</span>
                   <button
-                    onClick={() => { setEditName(helmet.deviceName); setEditingName(true); }}
+                    onClick={() => { setEditName(helmet.helmet_name); setEditingName(true); }}
                     className="text-gray-300 hover:text-gray-500 transition-colors shrink-0"
                   >
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-3 h-3">
@@ -354,7 +321,7 @@ function HelmetCard({
               )}
             </div>
 
-            <p className="text-[11px] font-mono text-gray-400 mb-3 truncate">{helmet.deviceId}</p>
+            <p className="text-[11px] font-mono text-gray-400 mb-3 truncate">{helmet.bluetooth_device_name}</p>
 
             <div className="flex items-center gap-4 flex-wrap">
               <BatteryBar level={helmet.battery} />
@@ -432,20 +399,31 @@ function HelmetCard({
 }
 
 export default function ManageHelmetsPage() {
-  const [helmets, setHelmets] = useState<Helmet[]>([]);
+  const [helmets, setHelmets] = useState<HelmetWithStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [showPairModal, setShowPairModal] = useState(false);
   const [toast, setToast] = useState<ToastState | null>(null);
+
+  // BLE hook untuk koneksi
+  const { connect, disconnect, isConnected, isConnecting, activeHelmet: bleActiveHelmet } = useBLE();
 
   const showToast = (message: string, type: ToastType) =>
     setToast({ message, type, id: Date.now() });
 
   const fetchHelmets = useCallback(async () => {
     try {
-      const res = await apiFetch<ApiResponse<Helmet[]>>('/helmets');
-      setHelmets(res.data);
-    } catch {
-
+      const data = await api.getHelmets();
+      // Convert to HelmetWithStatus with default values
+      const helmetsWithStatus: HelmetWithStatus[] = data.map((h) => ({
+        ...h,
+        isActive: false,
+        battery: 85, // Default value, will be updated from BLE
+        lastSeen: null,
+        batteryLow: false,
+      }));
+      setHelmets(helmetsWithStatus);
+    } catch (error) {
+      console.error('Failed to fetch helmets:', error);
     } finally {
       setLoading(false);
     }
@@ -453,34 +431,23 @@ export default function ManageHelmetsPage() {
 
   useEffect(() => {
     fetchHelmets();
-    const interval = setInterval(fetchHelmets, 5000);
-    return () => clearInterval(interval);
   }, [fetchHelmets]);
 
   const handleActivate = async (id: number) => {
-    try {
-      await apiFetch(`/helmets/${id}/activate`, { method: 'PATCH' });
-      setHelmets((prev) => prev.map((h) => ({ ...h, isActive: h.id === id })));
-      
-        localStorage.setItem('selectedHelmetId', id.toString());
-        localStorage.setItem('activeHelmetName', helmets.find(h => h.id === id)?.deviceName || '');
-
-      showToast('Helm activated successfully.', 'success');
-    } catch (err: unknown) {
-      showToast(err instanceof Error ? err.message : 'Error occurred while activating helmet.', 'error');
-    }
+    // Set active helmet locally
+    setHelmets((prev) => prev.map((h) => ({ ...h, isActive: h.id === id })));
+    localStorage.setItem('activeHelmetId', id.toString());
+    localStorage.setItem('activeHelmetName', helmets.find(h => h.id === id)?.helmet_name || '');
+    showToast('Helmet activated successfully.', 'success');
   };
 
   const handleRename = async (id: number, name: string) => {
     try {
-      await apiFetch(`/helmets/${id}`, {
-        method: 'PUT',
-        body: JSON.stringify({ device_name: name }),
-      });
+      await api.updateHelmet(id, name);
       setHelmets((prev) =>
-        prev.map((h) => (h.id === id ? { ...h, deviceName: name } : h))
+        prev.map((h) => (h.id === id ? { ...h, helmet_name: name } : h))
       );
-      showToast('Helm name updated successfully.', 'success');
+      showToast('Helmet name updated successfully.', 'success');
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Failed to update helmet name.', 'error');
     }
@@ -488,15 +455,45 @@ export default function ManageHelmetsPage() {
 
   const handleDelete = async (id: number) => {
     try {
-      await apiFetch(`/helmets/${id}`, { method: 'DELETE' });
+      await api.removeHelmet(id);
       setHelmets((prev) => prev.filter((h) => h.id !== id));
-      showToast('Helm successfully unpaired.', 'success');
+      
+      // If deleted helmet was active, clear active state
+      const deletedHelmet = helmets.find(h => h.id === id);
+      if (deletedHelmet?.isActive) {
+        localStorage.removeItem('activeHelmetId');
+        localStorage.removeItem('activeHelmetName');
+      }
+      
+      showToast('Helmet successfully unpaired.', 'success');
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Failed to unpair helmet.', 'error');
     }
   };
 
-  const connectedCount = helmets.filter((h) => getConnectionStatus(h.lastSeen) === 'connected').length;
+  const handleBLEConnect = async () => {
+    try {
+      const result = await connect(helmets);
+      if (result) {
+        showToast(`Connected to ${result.helmet.helmet_name}`, 'success');
+        // Update the helmet's active status
+        setHelmets((prev) => prev.map((h) => ({
+          ...h,
+          isActive: h.id === result.helmet.id,
+        })));
+        localStorage.setItem('activeHelmetId', result.helmet.id.toString());
+        localStorage.setItem('activeHelmetName', result.helmet.helmet_name);
+      }
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : 'BLE connection failed.', 'error');
+    }
+  };
+
+  const connectedCount = helmets.filter((h) => {
+    if (!h.lastSeen) return false;
+    return new Date().getTime() - new Date(h.lastSeen).getTime() < 30000;
+  }).length;
+
   const activeHelmet = helmets.find((h) => h.isActive);
 
   return (
@@ -516,34 +513,85 @@ export default function ManageHelmetsPage() {
           {/* Header */}
           <div className="flex items-start justify-between mt-6 mb-6">
             <div>
-              <h1 className="text-2xl font-black text-gray-900">Manage Helm</h1>
+              <h1 className="text-2xl font-black text-gray-900">Manage Helmet</h1>
               <p className="text-sm text-gray-400 mt-0.5">
                 {loading
-                  ? 'Load Helm Data...'
+                  ? 'Loading helmet data...'
                   : `${helmets.length} Registered Device · ${connectedCount} Online`}
               </p>
             </div>
-            <button
-              onClick={() => setShowPairModal(true)}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm text-white shadow-sm hover:opacity-90 hover:shadow-md transition-all"
-              style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-4 h-4">
-                <path d="M12 5v14M5 12h14" strokeLinecap="round" />
-              </svg>
-              Pair Helm
-            </button>
+            <div className="flex gap-3">
+              {/* BLE Connect Button */}
+              <button
+                onClick={handleBLEConnect}
+                disabled={isConnecting || isConnected}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${
+                  isConnected
+                    ? 'bg-emerald-500 text-white cursor-default'
+                    : 'bg-gray-800 text-white hover:bg-gray-900 hover:shadow-md'
+                }`}
+              >
+                {isConnecting ? (
+                  <>
+                    <Spinner />
+                    Connecting...
+                  </>
+                ) : isConnected ? (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
+                      <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                    Connected
+                  </>
+                ) : (
+                  <>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
+                      <path d="M6.5 6.5L17.5 17.5M17.5 6.5L6.5 17.5" strokeLinecap="round" />
+                    </svg>
+                    Connect BLE
+                  </>
+                )}
+              </button>
+
+              {/* Pair Button */}
+              <button
+                onClick={() => setShowPairModal(true)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm text-white shadow-sm hover:opacity-90 hover:shadow-md transition-all"
+                style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" className="w-4 h-4">
+                  <path d="M12 5v14M5 12h14" strokeLinecap="round" />
+                </svg>
+                Pair Helmet
+              </button>
+            </div>
           </div>
 
+          {/* BLE Connection Status Banner */}
+          {isConnected && bleActiveHelmet && (
+            <div className="mb-5 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
+              <p className="text-sm text-emerald-700">
+                <span className="font-black">{bleActiveHelmet.helmet.helmet_name}</span>
+                {' '}BLE connected — receiving real-time sensor data.
+              </p>
+              <button
+                onClick={disconnect}
+                className="ml-auto text-xs text-emerald-600 hover:text-emerald-800 font-medium"
+              >
+                Disconnect
+              </button>
+            </div>
+          )}
+
           {/* Active helmet banner */}
-          {activeHelmet && (
+          {activeHelmet && !isConnected && (
             <div className="mb-5 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
               <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shrink-0" />
               <p className="text-sm text-orange-700">
-                <span className="font-black">{activeHelmet.deviceName}</span>
-                {' '}is currently active and sending real-time data.
+                <span className="font-black">{activeHelmet.helmet_name}</span>
+                {' '}is currently active. Click Connect BLE to receive real-time data.
               </p>
-              <StatusBadge status={getConnectionStatus(activeHelmet.lastSeen)} />
             </div>
           )}
 
@@ -551,7 +599,7 @@ export default function ManageHelmetsPage() {
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20 gap-3 text-gray-400">
               <Spinner size="md" />
-              <span className="text-sm font-semibold">Loading Helm Data...</span>
+              <span className="text-sm font-semibold">Loading helmet data...</span>
             </div>
           ) : helmets.length === 0 ? (
             <div className="bg-white rounded-2xl border-2 border-dashed border-gray-200 p-14 flex flex-col items-center text-center">
@@ -562,7 +610,7 @@ export default function ManageHelmetsPage() {
                   <rect x="7" y="16" width="10" height="2.5" rx="1.25" fill="#e2e8f0" />
                 </svg>
               </div>
-              <p className="text-sm font-bold text-gray-500 mb-1">No Registered Helm</p>
+              <p className="text-sm font-bold text-gray-500 mb-1">No Registered Helmet</p>
               <p className="text-xs text-gray-400 mb-5">
                 Start by pairing your helmet to view battery level and connection status.
               </p>
@@ -571,7 +619,7 @@ export default function ManageHelmetsPage() {
                 className="px-5 py-2.5 rounded-lg text-sm font-bold text-white transition-all hover:opacity-90"
                 style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
               >
-                Pair First Helm
+                Pair First Helmet
               </button>
             </div>
           ) : (
@@ -593,7 +641,16 @@ export default function ManageHelmetsPage() {
       {showPairModal && (
         <PairModal
           onClose={() => setShowPairModal(false)}
-          onPaired={(h) => setHelmets((prev) => [...prev, h])}
+          onPaired={(h) => {
+            const newHelmet: HelmetWithStatus = {
+              ...h,
+              isActive: false,
+              battery: 85,
+              lastSeen: null,
+              batteryLow: false,
+            };
+            setHelmets((prev) => [...prev, newHelmet]);
+          }}
           onToast={showToast}
         />
       )}

@@ -1,4 +1,5 @@
 import { ApiResponse, AdminDashboardData, User, LoginResponse } from '@/types';
+import type { Helmet, Ride, RideDetail, SensorPayload } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -8,7 +9,6 @@ class ApiService {
   constructor() {
     this.loadToken();
     
-    // Optional: listen untuk localStorage changes (jika login di tab lain)
     if (typeof window !== 'undefined') {
       window.addEventListener('storage', (e) => {
         if (e.key === 'token') {
@@ -44,7 +44,6 @@ class ApiService {
   }
 
   getToken() {
-    // Selalu ambil fresh dari localStorage
     if (typeof window !== 'undefined') {
       this.token = localStorage.getItem('token');
     }
@@ -90,7 +89,7 @@ class ApiService {
     return response.json();
   }
 
-  // Auth endpoints
+  // ========== AUTH ENDPOINTS ==========
   async login(email: string, password: string): Promise<LoginResponse> {
     const response = await this.request<LoginResponse>('/auth/login', {
       method: 'POST',
@@ -99,9 +98,8 @@ class ApiService {
     
     if (response.status && response.access_token) {
       this.setToken(response.access_token);
-      // Simpan juga role
       if (typeof window !== 'undefined') {
-        localStorage.setItem('user_role', response.role);
+        localStorage.setItem('user_role', response.role || 'user');
         localStorage.setItem('user_data', JSON.stringify(response.user));
       }
     }
@@ -119,7 +117,7 @@ class ApiService {
     }
   }
 
-  // Admin endpoints
+  // ========== ADMIN ENDPOINTS ==========
   async getAdminDashboard(): Promise<AdminDashboardData> {
     const response = await this.request<ApiResponse<AdminDashboardData>>('/admin/dashboard');
     return response.data!;
@@ -130,11 +128,92 @@ class ApiService {
     const response = await this.request<ApiResponse<User[]>>(`/admin/users${query}`);
     return response.data || [];
   }
-
+ 
+  // ========== USER ENDPOINTS ==========
   async getUserProfile(): Promise<User> {
     const response = await this.request<ApiResponse<User>>('/user/profile');
+    console.log('Profile response:', response);
     return response.data!;
   }
+
+  async updateUserProfile(payload: Partial<User>): Promise<User> {
+    const response = await this.request<ApiResponse<User>>('/user/profile', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+    return response.data!;
+  }
+
+  // ========== HELMET ENDPOINTS ==========
+  async getHelmets(): Promise<Helmet[]> {
+    const response = await this.request<{ data: Helmet[] }>('/helmets');
+    return response.data;
+  }
+
+  async registerHelmet(helmet_name: string, bluetooth_device_name: string): Promise<Helmet> {
+    const response = await this.request<{ message: string; data: Helmet }>('/helmets', {
+      method: 'POST',
+      body: JSON.stringify({ helmet_name, bluetooth_device_name }),
+    });
+    return response.data;
+  }
+
+  async removeHelmet(helmetId: number): Promise<void> {
+    await this.request(`/helmets/${helmetId}`, { method: 'DELETE' });
+  }
+
+  async validateHelmetConnection(bluetooth_device_name: string): Promise<{ valid: boolean; message: string; data?: Helmet }> {
+    return this.request('/helmets/validate-connection', {
+      method: 'POST',
+      body: JSON.stringify({ bluetooth_device_name }),
+    });
+  }
+
+  async updateHelmet(helmetId: number, helmet_name: string): Promise<Helmet> {
+    const response = await this.request<{ message: string; data: Helmet }>(`/helmets/${helmetId}`, {
+      method: 'PUT',
+      body: JSON.stringify({ helmet_name }),
+    });
+    return response.data;
+  }
+
+  // ========== RIDE ENDPOINTS ==========
+  async startRide(helmet_id: number): Promise<Ride> {
+    const response = await this.request<{ message: string; data: Ride }>('/rides/start', {
+      method: 'POST',
+      body: JSON.stringify({ helmet_id }),
+    });
+    return response.data;
+  }
+
+  async finishRide(rideId: number): Promise<Ride> {
+    const response = await this.request<{ message: string; data: Ride }>(`/rides/${rideId}/finish`, {
+      method: 'POST',
+    });
+    return response.data;
+  }
+
+  async storeSensorData(rideId: number, payload: SensorPayload & { helmet_id: number }): Promise<void> {
+    await this.request(`/rides/${rideId}/sensor-data`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    });
+  }
+
+  async getActiveRide(): Promise<Ride | null> {
+    const response = await this.request<{ data: Ride | null }>('/rides/active');
+    return response.data;
+  }
+
+  async getRideHistory(page: number = 1): Promise<{ data: Ride[]; meta: { current_page: number; last_page: number; total: number } }> {
+    return this.request(`/rides/history?page=${page}`);
+  }
+
+  async getRideDetail(rideId: number): Promise<RideDetail> {
+    const response = await this.request<{ data: RideDetail }>(`/rides/${rideId}`);
+    return response.data;
+  }
+  
 }
 
 export const api = new ApiService();
