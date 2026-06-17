@@ -10,6 +10,7 @@ export interface User {
   contact2: string | null;
   name1: string | null;
   name2: string | null;
+  profile_completed?: boolean;
 }
 
 export interface DashboardStats {

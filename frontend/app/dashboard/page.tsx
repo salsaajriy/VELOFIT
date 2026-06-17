@@ -2,13 +2,16 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import {api} from '@/services/api';
 import Sidebar from '@/components/sidebar';
 import RecentRides from '@/components/RecentRides';
 import RecentTarget from '@/components/RecentTarget';
 import HelmetBatteryCard from '@/components/HelmetBattery';
+import CompleteProfileModal from '@/components/CompleteProfile';
 
 export default function DashboardPage() {
   const [rideActive, setRideActive] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
   const router = useRouter();
   
   useEffect(() => {
@@ -18,6 +21,22 @@ export default function DashboardPage() {
       document.body.style.overflow = '';
     }
   }, [rideActive]);
+
+  useEffect(() => {
+    const checkProfile = async () => {
+      try {
+        const profile = await api.getUserProfile();
+
+        if (!profile.profile_completed) {
+          setShowProfileModal(true);
+        }
+      } catch (error) {
+        console.error('Failed to load profile:', error);
+      }
+    };
+
+    checkProfile();
+  }, []);
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -139,6 +158,12 @@ export default function DashboardPage() {
           </div>
         </div>
           <RecentRides/>
+
+          {showProfileModal && (
+            <CompleteProfileModal
+              onClose={() => setShowProfileModal(false)}
+            />
+          )}
       </main>
     </div>
   );

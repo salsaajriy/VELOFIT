@@ -38,7 +38,14 @@ class ProfileController extends Controller
         $user = $request->user();
         
         $userData = $user->toArray();
-        $userData['age'] = $user->birth_date ? Carbon::parse($user->birth_date)->age : null;
+        $userData['age'] = $user->birth_date 
+        ? Carbon::parse($user->birth_date)->age 
+        : null;
+
+        $userData['profile_completed'] = (
+            !is_null($user->weight) &&
+            !is_null($user->height)
+        );
         return response()->json([
             'status' => true,
             'message' => 'User profile information',
