@@ -39,7 +39,7 @@ const navItems = [
   },
   {
     label: 'Goal Achievement',
-    href: '/goals',
+    href: '/target',
     icon: FiTarget,
   },
   {
