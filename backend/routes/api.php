@@ -8,7 +8,7 @@ use App\Http\Controllers\API\ProfileController;
 use App\Http\Controllers\API\HelmetController;
 use App\Http\Controllers\API\RideController;
 use App\Http\Controllers\API\IoTController;
-use App\Http\Controllers\API\GoalController;
+use App\Http\Controllers\API\TargetController;
 
 //------------------------------------------------------------------
 // PUBLIC ROUTES (tidak perlu token)
@@ -20,10 +20,8 @@ Route::prefix('auth')->group(function () {
 
     Route::get('/google', [AuthController::class, 'redirectToGoogle'])
         ->middleware('throttle:google-oauth');
-    
     Route::get('/google/callback', [AuthController::class, 'handleGoogleCallback'])
         ->middleware('throttle:google-oauth');
-
 });
 
 Route::post('/helmets/data', [HelmetController::class, 'receiveData']);
@@ -77,7 +75,14 @@ Route::middleware('auth:sanctum')->group(function () {
 
     });
 
-    Route::get('/goals/progress', [GoalController::class, 'progress']);
-    
-    Route::apiResource('goals', GoalController::class);
+    Route::prefix('targets')->group(function () {
+        Route::get('/active',           [TargetController::class, 'active']);
+        Route::post('/',                [TargetController::class, 'store']);
+        Route::get('/history',          [TargetController::class, 'history']);
+        Route::get('/daily-breakdown',  [TargetController::class, 'dailyBreakdown']);
+        Route::get('/weekly-breakdown', [TargetController::class, 'weeklyBreakdown']);
+        Route::get('/stats',            [TargetController::class, 'stats']);
+    });
+
+
 });

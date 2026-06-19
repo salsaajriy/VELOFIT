@@ -310,6 +310,7 @@ export default function ProfilePage() {
                           src={avatar}
                           alt="Profile"
                           fill
+                          sizes="(max-width: 768px) 40px, 48px"
                           className="object-cover"
                         />
                       ) : (
