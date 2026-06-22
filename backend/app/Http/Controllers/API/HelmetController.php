@@ -58,9 +58,8 @@ class HelmetController extends Controller
         ], 201);
     }
 
-    public function destroy(Request $request, Helmet $helmet): JsonResponse
-    {
-
+public function destroy(Request $request, Helmet $helmet): JsonResponse
+{
     if ($helmet->user_id !== $request->user()->id) {
         return response()->json([
             'message' => 'Helmet not found in your account'
@@ -69,10 +68,10 @@ class HelmetController extends Controller
 
     $helmet->delete();
 
-        return response()->json([
-            'message' => 'Helmet removed from your account.',
-        ]);
-    }
+    return response()->json([
+        'message' => 'Helmet removed from your account.',
+    ]);
+}
 
     /**
      * POST /api/helmets/validate-connection

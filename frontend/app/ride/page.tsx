@@ -70,27 +70,55 @@ function StatCard({
 // ========== MAIN COMPONENT ==========
 export default function RidePage() {
   const { startRide, finishRide, isRideActive, activeRide, totalDistance, currentSpeed } = useRide();
-  const { isConnected, activeHelmet } = useBLE();
+const {
+  connect,
+  isConnected,
+  activeHelmet,
+  cancelAlert,
+} = useBLE();
   const sensorData = useSensorStore((s) => s.sensorData);
   const routePoints = useSensorStore((s) => s.routePoints);
+
+  const sosActive = sensorData?.g !== undefined && sensorData.g > 1;
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const canStart = isConnected && !isRideActive;
+  const canStart = !isRideActive;
 
-  const handleStart = async () => {
-    setError(''); setLoading(true);
-    try { await startRide(); }
-    catch (err: unknown) { setError(err instanceof Error ? err.message : 'Failed to start ride.'); }
-    finally { setLoading(false); }
-  };
+const handleStart = async () => {
+  setError('');
+  setLoading(true);
 
-  const handleFinish = async () => {
-    setLoading(true);
-    try { await finishRide(); }
-    finally { setLoading(false); }
-  };
+  try {
+    console.log('isConnected:', isConnected);
+    console.log('activeHelmet:', activeHelmet);
+
+    if (!isConnected) {
+      await connect();
+    }
+
+    await startRide();
+  } catch (err: unknown) {
+    setError(
+      err instanceof Error
+        ? err.message
+        : 'Failed to start ride.'
+    );
+  } finally {
+    setLoading(false);
+  }
+};
+const handleFinish = async () => {
+  setLoading(true);
+
+  try {
+    await finishRide();
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
@@ -148,22 +176,6 @@ export default function RidePage() {
 
       {/* ===== MAIN CONTENT ===== */}
       <div className="max-w-6xl mx-auto px-6 py-6">
-        {/* Connection Guard */}
-        {!isConnected && (
-          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-6">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0" />
-              <div>
-                <p className="text-sm font-semibold text-amber-700">
-                  Connect a helmet before starting a ride.
-                </p>
-                <p className="text-xs text-amber-600">
-                  Go to <Link href="/helmets" className="underline font-bold">My Helmets</Link> to pair your device.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Error Display */}
         {error && (
@@ -221,26 +233,29 @@ export default function RidePage() {
             </div>
 
             {/* ===== SOS ALERT BANNER ===== */}
-            {sensorData.alert > 0 && (
-              <div className={`rounded-2xl p-4 mb-6 text-center ${
-                sensorData.alert === 2 
-                  ? 'bg-red-50 border-2 border-red-400' 
-                  : 'bg-amber-50 border-2 border-amber-400'
-              }`}>
-                <div className="flex items-center justify-center gap-3">
-                  <AlertTriangle className={`w-6 h-6 ${
-                    sensorData.alert === 2 ? 'text-red-500 animate-pulse' : 'text-amber-500'
-                  }`} />
-                  <p className={`text-base font-black ${
-                    sensorData.alert === 2 ? 'text-red-600' : 'text-amber-600'
-                  }`}>
-                    {sensorData.alert === 2 
-                      ? '🚨 SOS ALERT ACTIVE — Emergency detected!' 
-                      : '⚠️ Impact detected — Countdown active!'}
-                  </p>
-                </div>
-              </div>
-            )}
+{sosActive && (
+  <div className="border-2 border-red-400 bg-red-50 rounded-2xl p-4 flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <AlertTriangle className="w-6 h-6 text-red-500" />
+      <span className="font-bold text-red-600">
+        🚨 SOS ALERT ACTIVE — Emergency detected!
+      </span>
+    </div>
+
+    <button
+      onClick={async () => {
+        try {
+          await cancelAlert();
+        } catch (err) {
+          console.error(err);
+        }
+      }}
+      className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition"
+    >
+      Cancel Alert
+    </button>
+  </div>
+)}
           </>
         ) : (
           // No sensor data yet
@@ -249,11 +264,9 @@ export default function RidePage() {
               <div className="p-4 bg-gray-100 rounded-full mb-4">
                 <Bluetooth className="w-10 h-10 text-gray-300" />
               </div>
-              <h3 className="text-lg font-bold text-gray-900 mb-1">Waiting for Data</h3>
+              <h3 className="text-lg font-bold text-gray-900 mb-1">Ready to Ride</h3>
               <p className="text-sm text-gray-400">
-                {isConnected 
-                  ? 'Sensor data will appear here once available.' 
-                  : 'Connect your helmet to start receiving data.'}
+                Start a ride to connect your helmet and begin tracking.
               </p>
             </div>
           </div>

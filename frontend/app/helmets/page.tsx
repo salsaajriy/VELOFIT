@@ -11,7 +11,6 @@ import type { Helmet } from '@/types';
 type ConnectionStatus = 'connected' | 'offline';
 
 interface HelmetWithStatus extends Helmet {
-  isActive: boolean;
   battery: number;
   lastSeen: string | null;
   batteryLow: boolean;
@@ -133,18 +132,70 @@ function PairModal({
 }) {
   const [helmetName, setHelmetName] = useState('');
   const [bleName, setBleName] = useState('');
+  const [bleConnected, setBleConnected] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
+
+const scanBLE = async () => {
+  const nav: any = navigator;
+
+  if (!nav.bluetooth) {
+    onToast(
+      'Web Bluetooth tidak didukung browser ini.',
+      'error'
+    );
+    return;
+  }
+
+  try {
+    setScanning(true);
+
+    const device = await nav.bluetooth.requestDevice({
+      filters: [{ namePrefix: 'VELOFIT' }],
+    });
+
+    if (device.name) {
+      setBleName(device.name);
+      setBleConnected(true);
+
+      onToast(
+        `Connected to ${device.name}`,
+        'success'
+      );
+    }
+  } catch (err) {
+    console.error(err);
+  } finally {
+    setScanning(false);
+  }
+};
   const handleSubmit = async () => {
-    if (!helmetName.trim() || !bleName.trim()) return;
+    if (!helmetName.trim() || !bleConnected) return;
+
     setLoading(true);
+
     try {
-      const newHelmet = await api.registerHelmet(helmetName.trim(), bleName.trim());
+      const newHelmet = await api.registerHelmet(
+        helmetName.trim(),
+        bleName.trim()
+      );
+
       onPaired(newHelmet);
-      onToast(`"${helmetName}" successfully paired.`, 'success');
+
+      onToast(
+        `"${helmetName}" successfully paired.`,
+        'success'
+      );
+
       onClose();
     } catch (err: unknown) {
-      onToast(err instanceof Error ? err.message : 'Failed to pair helmet.', 'error');
+      onToast(
+        err instanceof Error
+          ? err.message
+          : 'Failed to pair helmet.',
+        'error'
+      );
     } finally {
       setLoading(false);
     }
@@ -152,61 +203,103 @@ function PairModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+
       <div className="relative bg-white w-full sm:max-w-md sm:mx-4 sm:rounded-2xl rounded-t-3xl shadow-2xl z-10 p-6 pb-8 sm:pb-6">
         <div className="w-10 h-1 bg-gray-200 rounded-full mx-auto mb-5 sm:hidden" />
+
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h2 className="text-xl font-black text-gray-900">Pair New Helmet</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Register new helmet device</p>
+            <h2 className="text-xl font-black text-gray-900">
+              Pair New Helmet
+            </h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              Scan your VELOFIT helmet first
+            </p>
           </div>
+
           <button
             onClick={onClose}
             className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
-              <path d="M18 6 6 18M6 6l12 12" strokeLinecap="round" />
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className="w-4 h-4"
+            >
+              <path
+                d="M18 6 6 18M6 6l12 12"
+                strokeLinecap="round"
+              />
             </svg>
           </button>
         </div>
 
         <div className="space-y-4">
+
           <div>
-            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">HELMET NAME</label>
+            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">
+              HELMET DEVICE
+            </label>
+
+            {!bleConnected ? (
+              <button
+                onClick={scanBLE}
+                disabled={scanning}
+                className="w-full px-4 py-3 rounded-xl border border-orange-300 bg-orange-50 text-orange-600 font-bold hover:bg-orange-100 transition-all disabled:opacity-50"
+              >
+                {scanning ? 'Scanning...' : 'Scan BLE Device'}
+              </button>
+            ) : (
+              <div className="w-full px-4 py-3 rounded-xl bg-green-50 border border-green-200">
+                <div className="text-xs font-bold text-green-600">
+                  CONNECTED
+                </div>
+
+                <div className="text-sm font-semibold text-gray-800">
+                  {bleName}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">
+              HELMET NAME
+            </label>
+
             <input
               type="text"
               value={helmetName}
               onChange={(e) => setHelmetName(e.target.value)}
-              placeholder="e.g. VELOFIT Helmet A"
+              placeholder="e.g. My Daily Helmet"
               className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
             />
           </div>
-
-          <div>
-            <label className="block text-xs font-bold text-gray-500 tracking-widest mb-2">BLE DEVICE NAME</label>
-            <input
-              type="text"
-              value={bleName}
-              onChange={(e) => setBleName(e.target.value)}
-              placeholder="e.g. VELOFIT-12AB"
-              onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-              className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 transition-all"
-            />
-            <p className="text-[11px] text-gray-400 mt-1.5">
-              Enter the exact BLE device name from your ESP32.
-            </p>
-          </div>
-
+          
           <div className="flex gap-2 pt-1">
             <button
               onClick={handleSubmit}
-              disabled={loading || !helmetName.trim() || !bleName.trim()}
+              disabled={
+                loading ||
+                !helmetName.trim() ||
+                !bleConnected
+              }
               className="flex-1 py-3 rounded-lg font-bold text-sm text-white flex items-center justify-center gap-2 transition-all hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
-              style={{ background: 'linear-gradient(135deg, #c2440a, #b83208)' }}
+              style={{
+                background:
+                  'linear-gradient(135deg, #c2440a, #b83208)',
+              }}
             >
               {loading ? <Spinner /> : null}
               {loading ? 'Processing...' : 'Pair Now'}
             </button>
+
             <button
               onClick={onClose}
               className="px-5 py-3 rounded-lg font-bold text-sm border border-gray-200 text-gray-600 hover:bg-gray-50 transition-all"
@@ -214,6 +307,7 @@ function PairModal({
               Cancel
             </button>
           </div>
+
         </div>
       </div>
     </div>
@@ -222,19 +316,16 @@ function PairModal({
 
 function HelmetCard({
   helmet,
-  onActivate,
   onRename,
   onDelete,
 }: {
   helmet: HelmetWithStatus;
-  onActivate: (id: number) => Promise<void>;
   onRename: (id: number, name: string) => Promise<void>;
   onDelete: (id: number) => Promise<void>;
 }) {
   const [editingName, setEditingName] = useState(false);
   const [editName, setEditName] = useState(helmet.helmet_name);
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [loadingActivate, setLoadingActivate] = useState(false);
   const [loadingDelete, setLoadingDelete] = useState(false);
 
   const connection: ConnectionStatus = helmet.lastSeen 
@@ -248,12 +339,6 @@ function HelmetCard({
     setEditingName(false);
   };
 
-  const handleActivate = async () => {
-    setLoadingActivate(true);
-    await onActivate(helmet.id);
-    setLoadingActivate(false);
-  };
-
   const handleDelete = async () => {
     setLoadingDelete(true);
     await onDelete(helmet.id);
@@ -262,31 +347,19 @@ function HelmetCard({
 
   return (
     <div
-      className={`group relative bg-white rounded-2xl border-2 transition-all duration-200 overflow-hidden ${
-        helmet.isActive
-          ? 'border-orange-300 shadow-md shadow-orange-100'
-          : 'border-gray-100 hover:border-gray-200 hover:shadow-sm'
-      }`}
+      className="group relative bg-white rounded-2xl border-2 border-gray-100 hover:border-gray-200 hover:shadow-sm transition-all duration-200 overflow-hidden"
     >
-      {helmet.isActive && (
-        <div className="absolute top-0 left-0 right-0 h-0.5 bg-linear-to-r from-orange-400 to-red-400" />
-      )}
-
       <div className="p-5">
         <div className="flex items-start gap-4">
           {/* Icon */}
-          <div
-            className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
-              helmet.isActive ? 'bg-orange-50' : 'bg-gray-50'
-            }`}
-          >
+          <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 bg-gray-50">
             <svg viewBox="0 0 24 24" fill="none" className="w-6 h-6">
               <path
                 d="M12 2C8.134 2 5 5.134 5 9v4h14V9c0-3.866-3.134-7-7-7z"
-                fill={helmet.isActive ? '#fb923c' : '#94a3b8'}
+                fill='#94a3b8'
               />
-              <rect x="4" y="13" width="16" height="3" rx="1.5" fill={helmet.isActive ? '#fed7aa' : '#e2e8f0'} />
-              <rect x="7" y="16" width="10" height="2.5" rx="1.25" fill={helmet.isActive ? '#fdba74' : '#cbd5e1'} />
+              <rect x="4" y="13" width="16" height="3" rx="1.5" fill='#e2e8f0' />
+              <rect x="7" y="16" width="10" height="2.5" rx="1.25" fill='#cbd5e1' />
             </svg>
           </div>
 
@@ -323,16 +396,6 @@ function HelmetCard({
 
             <p className="text-[11px] font-mono text-gray-400 mb-3 truncate">{helmet.bluetooth_device_name}</p>
 
-            <div className="flex items-center gap-4 flex-wrap">
-              <BatteryBar level={helmet.battery} />
-              <StatusBadge status={connection} />
-              {helmet.isActive && (
-                <span className="text-[10px] font-black text-orange-500 bg-orange-50 border border-orange-200 px-2 py-0.5 rounded-full tracking-widest uppercase">
-                  Active
-                </span>
-              )}
-            </div>
-
             {helmet.lastSeen && (
               <p className="text-[10px] text-gray-300 mt-2">
                 Last seen:{' '}
@@ -348,21 +411,6 @@ function HelmetCard({
 
           {/* Action buttons */}
           <div className="absolute top-4 right-4 flex items-center gap-1.5">
-            {!helmet.isActive && (
-              <button
-                onClick={handleActivate}
-                disabled={loadingActivate}
-                title="Jadikan Aktif"
-                className="h-7 px-2.5 flex items-center gap-1 rounded-lg bg-orange-50 border border-orange-200 text-orange-600 text-[11px] font-bold hover:bg-orange-100 transition-colors disabled:opacity-50"
-              >
-                {loadingActivate ? <Spinner /> : (
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-3 h-3">
-                    <path d="M5 12l5 5L20 7" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                )}
-                {!loadingActivate && <span>Activate</span>}
-              </button>
-            )}
 
             {confirmDelete ? (
               <div className="flex items-center gap-1">
@@ -405,7 +453,7 @@ export default function ManageHelmetsPage() {
   const [toast, setToast] = useState<ToastState | null>(null);
 
   // BLE hook untuk koneksi
-  const { connect, disconnect, isConnected, isConnecting, activeHelmet: bleActiveHelmet } = useBLE();
+  const { connect, disconnect, isConnected, isConnecting } = useBLE();
 
   const showToast = (message: string, type: ToastType) =>
     setToast({ message, type, id: Date.now() });
@@ -416,8 +464,7 @@ export default function ManageHelmetsPage() {
       // Convert to HelmetWithStatus with default values
       const helmetsWithStatus: HelmetWithStatus[] = data.map((h) => ({
         ...h,
-        isActive: false,
-        battery: 85, // Default value, will be updated from BLE
+        battery: 85,
         lastSeen: null,
         batteryLow: false,
       }));
@@ -433,14 +480,6 @@ export default function ManageHelmetsPage() {
     fetchHelmets();
   }, [fetchHelmets]);
 
-  const handleActivate = async (id: number) => {
-    // Set active helmet locally
-    setHelmets((prev) => prev.map((h) => ({ ...h, isActive: h.id === id })));
-    localStorage.setItem('activeHelmetId', id.toString());
-    localStorage.setItem('activeHelmetName', helmets.find(h => h.id === id)?.helmet_name || '');
-    showToast('Helmet activated successfully.', 'success');
-  };
-
   const handleRename = async (id: number, name: string) => {
     try {
       await api.updateHelmet(id, name);
@@ -454,16 +493,11 @@ export default function ManageHelmetsPage() {
   };
 
   const handleDelete = async (id: number) => {
+    console.log('DELETE ID:', id);
     try {
       await api.removeHelmet(id);
       setHelmets((prev) => prev.filter((h) => h.id !== id));
-      
-      // If deleted helmet was active, clear active state
-      const deletedHelmet = helmets.find(h => h.id === id);
-      if (deletedHelmet?.isActive) {
-        localStorage.removeItem('activeHelmetId');
-        localStorage.removeItem('activeHelmetName');
-      }
+    
       
       showToast('Helmet successfully unpaired.', 'success');
     } catch (err: unknown) {
@@ -473,17 +507,7 @@ export default function ManageHelmetsPage() {
 
   const handleBLEConnect = async () => {
     try {
-      const result = await connect(helmets);
-      if (result) {
-        showToast(`Connected to ${result.helmet.helmet_name}`, 'success');
-        // Update the helmet's active status
-        setHelmets((prev) => prev.map((h) => ({
-          ...h,
-          isActive: h.id === result.helmet.id,
-        })));
-        localStorage.setItem('activeHelmetId', result.helmet.id.toString());
-        localStorage.setItem('activeHelmetName', result.helmet.helmet_name);
-      }
+      
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'BLE connection failed.', 'error');
     }
@@ -493,8 +517,6 @@ export default function ManageHelmetsPage() {
     if (!h.lastSeen) return false;
     return new Date().getTime() - new Date(h.lastSeen).getTime() < 30000;
   }).length;
-
-  const activeHelmet = helmets.find((h) => h.isActive);
 
   return (
     <>
@@ -521,37 +543,6 @@ export default function ManageHelmetsPage() {
               </p>
             </div>
             <div className="flex gap-3">
-              {/* BLE Connect Button */}
-              <button
-                onClick={handleBLEConnect}
-                disabled={isConnecting || isConnected}
-                className={`flex items-center gap-2 px-4 py-2.5 rounded-lg font-bold text-sm transition-all ${
-                  isConnected
-                    ? 'bg-emerald-500 text-white cursor-default'
-                    : 'bg-gray-800 text-white hover:bg-gray-900 hover:shadow-md'
-                }`}
-              >
-                {isConnecting ? (
-                  <>
-                    <Spinner />
-                    Connecting...
-                  </>
-                ) : isConnected ? (
-                  <>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-4 h-4">
-                      <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
-                    Connected
-                  </>
-                ) : (
-                  <>
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-4 h-4">
-                      <path d="M6.5 6.5L17.5 17.5M17.5 6.5L6.5 17.5" strokeLinecap="round" />
-                    </svg>
-                    Connect BLE
-                  </>
-                )}
-              </button>
 
               {/* Pair Button */}
               <button
@@ -566,34 +557,6 @@ export default function ManageHelmetsPage() {
               </button>
             </div>
           </div>
-
-          {/* BLE Connection Status Banner */}
-          {isConnected && bleActiveHelmet && (
-            <div className="mb-5 flex items-center gap-3 bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-              <p className="text-sm text-emerald-700">
-                <span className="font-black">{bleActiveHelmet.helmet.helmet_name}</span>
-                {' '}BLE connected — receiving real-time sensor data.
-              </p>
-              <button
-                onClick={disconnect}
-                className="ml-auto text-xs text-emerald-600 hover:text-emerald-800 font-medium"
-              >
-                Disconnect
-              </button>
-            </div>
-          )}
-
-          {/* Active helmet banner */}
-          {activeHelmet && !isConnected && (
-            <div className="mb-5 flex items-center gap-3 bg-orange-50 border border-orange-200 rounded-xl px-4 py-3">
-              <span className="w-2 h-2 rounded-full bg-orange-400 animate-pulse shrink-0" />
-              <p className="text-sm text-orange-700">
-                <span className="font-black">{activeHelmet.helmet_name}</span>
-                {' '}is currently active. Click Connect BLE to receive real-time data.
-              </p>
-            </div>
-          )}
 
           {/* List */}
           {loading ? (
@@ -625,13 +588,13 @@ export default function ManageHelmetsPage() {
           ) : (
             <div className="space-y-3">
               {helmets.map((helmet) => (
-                <HelmetCard
-                  key={helmet.id}
-                  helmet={helmet}
-                  onActivate={handleActivate}
-                  onRename={handleRename}
-                  onDelete={handleDelete}
-                />
+              <HelmetCard
+                key={helmet.id}
+                helmet={helmet}
+                onRename={handleRename}
+                onDelete={handleDelete}
+              />
+              
               ))}
             </div>
           )}
@@ -644,7 +607,6 @@ export default function ManageHelmetsPage() {
           onPaired={(h) => {
             const newHelmet: HelmetWithStatus = {
               ...h,
-              isActive: false,
               battery: 85,
               lastSeen: null,
               batteryLow: false,

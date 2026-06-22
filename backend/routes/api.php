@@ -49,14 +49,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
 
     Route::prefix('helmets')->group(function () {
-        Route::get('/',                 [HelmetController::class, 'index']);
-        Route::post('/',                [HelmetController::class, 'store']);
-        Route::put('/{id}',             [HelmetController::class, 'update']);
-        Route::patch('/{id}/activate',  [HelmetController::class, 'activate']);
-        Route::delete('/{id}',          [HelmetController::class, 'destroy']);
-    });
-
-    Route::prefix('helmets')->group(function () {
         Route::get('/',                    [HelmetController::class, 'index']);
         Route::post('/',                   [HelmetController::class, 'store']);
         Route::put('/{helmet}',            [HelmetController::class, 'update']);
