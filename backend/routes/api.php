@@ -9,6 +9,7 @@ use App\Http\Controllers\API\HelmetController;
 use App\Http\Controllers\API\RideController;
 use App\Http\Controllers\API\IoTController;
 use App\Http\Controllers\API\TargetController;
+use App\Http\Controllers\API\ForgotPasswordController;
 
 //------------------------------------------------------------------
 // PUBLIC ROUTES (tidak perlu token)
@@ -27,6 +28,8 @@ Route::prefix('auth')->group(function () {
 Route::post('/helmets/data', [HelmetController::class, 'receiveData']);
 Route::post('/iot/location', [IoTController::class, 'receiveData']);
 
+Route::post('/forgot-password',[ForgotPasswordController::class,'forgot']);
+Route::post('/reset-password', [ForgotPasswordController::class,'reset']);
 
 //------------------------------------------------------------------
 // PROTECTED ROUTES (wajib pakai bearer token)

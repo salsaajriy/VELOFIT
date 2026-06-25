@@ -11,8 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('helmets', function (Blueprint $table) {
-            $table->string('bluetooth_device_name')->nullable();
+        Schema::create('password_reset_tokens', function (Blueprint $table) {
+            $table->id();
+            $table->string('email');
+            $table->string('token');
+            $table->timestamps();
         });
     }
 
@@ -21,8 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('helmets', function (Blueprint $table) {
-            $table->dropColumn('bluetooth_device_name');
-        });
+        Schema::dropIfExists('password_reset_tokens');
     }
 };
