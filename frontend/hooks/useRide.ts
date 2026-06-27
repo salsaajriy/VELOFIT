@@ -62,6 +62,7 @@ export function useRide() {
 
     const ride = await api.startRide(activeHelmet.helmet.id);
     setActiveRide(ride);
+    console.log("Ride created:", ride);
 
     // Begin periodic sync
     syncIntervalRef.current = setInterval(async () => {

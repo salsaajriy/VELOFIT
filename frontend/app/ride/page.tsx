@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRide } from '@/hooks/useRide';
 import { useBLE } from '@/hooks/useBLE';
 import { useSensorStore } from '@/store/sensorStore';
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { 
@@ -70,25 +71,29 @@ function StatCard({
 // ========== MAIN COMPONENT ==========
 export default function RidePage() {
   const { startRide, finishRide, isRideActive, activeRide, totalDistance, currentSpeed } = useRide();
-const {
+  const {
   connect,
   isConnected,
   activeHelmet,
   cancelAlert,
 } = useBLE();
   const sensorData = useSensorStore((s) => s.sensorData);
+  useEffect(() => {
+  console.log("Sensor:", sensorData);
+}, [sensorData]);
   const routePoints = useSensorStore((s) => s.routePoints);
 
-  const sosActive = sensorData?.g !== undefined && sensorData.g > 1;
+  const showCountdown = sensorData?.alert === 1;
+  const showSOS = sensorData?.alert === 2;
 
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const canStart = !isRideActive;
 
-const handleStart = async () => {
-  setError('');
-  setLoading(true);
+  const handleStart = async () => {
+    setError('');
+    setLoading(true);
 
   try {
     console.log('isConnected:', isConnected);
@@ -233,7 +238,7 @@ const handleFinish = async () => {
             </div>
 
             {/* ===== SOS ALERT BANNER ===== */}
-{sosActive && (
+{showSOS && (
   <div className="border-2 border-red-400 bg-red-50 rounded-2xl p-4 flex items-center justify-between">
     <div className="flex items-center gap-3">
       <AlertTriangle className="w-6 h-6 text-red-500" />

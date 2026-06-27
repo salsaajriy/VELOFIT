@@ -213,6 +213,18 @@ class ApiService {
     const response = await this.request<{ data: RideDetail }>(`/rides/${rideId}`);
     return response.data;
   }
+
+  async getTemperatureHistory(rideId: number) {
+    const response = await this.request<{
+      data: {
+        body_temperature: number;
+        room_temperature: number;
+        recorded_at: string;
+      }[];
+    }>(`/rides/${rideId}/temperature-history`);
+
+    return response.data;
+  }
   
 }
 
