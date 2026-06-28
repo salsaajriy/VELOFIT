@@ -101,3 +101,29 @@ export interface ActiveHelmet {
   device: BluetoothDevice;
   characteristic: BluetoothRemoteGATTCharacteristic;
 }
+
+export interface Weather {
+    success: boolean;
+    location: string;
+    temperature: number;
+    condition: string;
+    icon: string;
+    humidity: number;
+    wind_kph: number;
+    last_updated: string;
+}
+
+export interface ForecastHour {
+    time: string;
+    temperature: number;
+    condition: string;
+    icon: string;
+    chance_of_rain: number;
+    will_rain: number;
+}
+
+export interface ForecastResponse {
+    success: boolean;
+    location: string;
+    forecast: ForecastHour[];
+}

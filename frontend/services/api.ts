@@ -1,5 +1,5 @@
 import { ApiResponse, AdminDashboardData, User, LoginResponse } from '@/types';
-import type { Helmet, Ride, RideDetail, SensorPayload } from '@/types';
+import type { Helmet, Ride, RideDetail, SensorPayload, Weather, ForecastResponse } from '@/types';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -224,6 +224,18 @@ class ApiService {
     }>(`/rides/${rideId}/temperature-history`);
 
     return response.data;
+  }
+
+  async getCurrentWeather(lat: number, lng: number): Promise<Weather> {
+      return this.request<Weather>(
+          `/weather/current?lat=${lat}&lng=${lng}`
+      );
+  }
+
+  async getForecast(lat: number, lng: number): Promise<ForecastResponse> {
+      return this.request<ForecastResponse>(
+          `/weather/forecast?lat=${lat}&lng=${lng}`
+      );
   }
   
 }

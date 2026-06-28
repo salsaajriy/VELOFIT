@@ -8,8 +8,13 @@ import RecentRides from '@/components/RecentRides';
 import RecentTarget from '@/components/RecentTarget';
 import HelmetBatteryCard from '@/components/HelmetBattery';
 import CompleteProfileModal from '@/components/CompleteProfile';
+import { Weather } from '@/types';
+import { getWeatherTheme } from "@/utils/weatherTheme";
 
 export default function DashboardPage() {
+  const [weather, setWeather] = useState<Weather>();
+  const weatherTheme = getWeatherTheme(weather?.condition ?? "");
+  const [weatherLoading, setWeatherLoading] = useState(true);
   const [rideActive, setRideActive] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const router = useRouter();
@@ -38,6 +43,34 @@ export default function DashboardPage() {
     checkProfile();
   }, []);
 
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setWeatherLoading(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      async (position) => {
+        try {
+          const data = await api.getCurrentWeather(
+            position.coords.latitude,
+            position.coords.longitude
+          );
+
+          setWeather(data);
+        } catch (error) {
+          console.error("Failed to load weather:", error);
+        } finally {
+          setWeatherLoading(false);
+        }
+      },
+      (error) => {
+        console.error(error);
+        setWeatherLoading(false);
+      }
+    );
+  }, []);
+
   return (
     <div className="flex min-h-screen bg-gray-50">
       <Sidebar />
@@ -48,18 +81,44 @@ export default function DashboardPage() {
           <div
             className="absolute inset-0 bg-cover bg-center"
             style={{
-              backgroundImage: `url('https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=1200&q=80')`,
+                backgroundImage: `url(${weatherTheme.backgroundImage})`
             }}
           />
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(to right, rgba(255,255,255,0.95) 45%, transparent 80%)' }} />
+          <div className="absolute inset-0" 
+            style={{
+                background: weatherTheme.overlay
+            }}
+          />
           <div className="relative z-10 h-full flex flex-col justify-center px-8 max-w-lg">
             <div className="inline-flex items-center gap-2 mb-3">
-              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
-              <span className="text-xs font-bold text-amber-700 uppercase tracking-widest">System Ready</span>
-            </div>
+              {weatherLoading ? (
+                  <span className="text-sm text-gray-500">
+                      Loading weather...
+                  </span>
+              ) : weather ? (
+                  <>
+                      <img
+                          src={weather.icon}
+                          className="w-8 h-8"
+                          alt={weather.condition}
+                      />
+                      <span className="font-bold text-gray-800">
+                          {weather.temperature}°C
+                      </span>
+                      <span className="text-gray-500">
+                          {weather.condition}
+                      </span>
+                  </>
+              ) : (
+                  <span>No weather</span>
+              )}
+          </div>
             <h2 className="text-3xl font-black text-gray-900 leading-tight mb-5">
-              Prepare for your<br />morning ride.
+              {weatherTheme.title}
             </h2>
+            <p className="text-gray-500 mt">
+                {weatherTheme.subtitle}
+            </p>
             <div className="flex gap-3">
               <button
                 onClick={() => router.push('/ride')}
@@ -114,7 +173,7 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           {/* Body Temperature */}
           <div className="bg-white rounded-2xl p-5 border-2 border-red-100 shadow-sm">
             <div className="flex items-center gap-2 mb-1">
@@ -131,25 +190,6 @@ export default function DashboardPage() {
             <p className="text-2xl font-black text-gray-900 mt-4 mb-3">37°C</p>
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
               <div className="h-full rounded-full bg-gradient from-red-400 to-red-600" style={{ width: '72%' }} />
-            </div>
-          </div>
-
-          {/* SOS Status */}
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0">
-                <svg viewBox="0 0 24 24" fill="#22c55e" className="w-6 h-6">
-                  <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-base font-bold text-gray-800">SOS Status</p>
-                <p className="text-xs text-gray-400">Ready for triggers</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-              <span className="text-sm font-black text-gray-800 tracking-wide">INACTIVE / SAFE</span>
             </div>
           </div>
  

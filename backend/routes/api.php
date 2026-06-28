@@ -10,6 +10,7 @@ use App\Http\Controllers\API\RideController;
 use App\Http\Controllers\API\IoTController;
 use App\Http\Controllers\API\TargetController;
 use App\Http\Controllers\API\ForgotPasswordController;
+use App\Http\Controllers\API\WeatherController;
 
 //------------------------------------------------------------------
 // PUBLIC ROUTES (tidak perlu token)
@@ -67,7 +68,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/{ride}/finish',                  [RideController::class, 'finish']);
         Route::get('/history',                         [RideController::class, 'history']);
         Route::get('/{ride}',                          [RideController::class, 'show']);
-
+        Route::get('/rides/{ride}/temperature-history',[RideController::class, 'temperatureHistory']);
     });
 
     Route::prefix('targets')->group(function () {
@@ -79,5 +80,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/stats',            [TargetController::class, 'stats']);
     });
 
-
+    Route::get('/weather/current', [WeatherController::class, 'current']);
+    Route::get('/weather/forecast', [WeatherController::class, 'forecast']);
 });
