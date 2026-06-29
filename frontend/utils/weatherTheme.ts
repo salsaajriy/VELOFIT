@@ -14,6 +14,8 @@ export function getWeatherTheme(condition: string): WeatherTheme {
         return {
             backgroundImage:
                 "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1600&q=80",
+            //ini contoh kalo make gambar dari kita nya langsung jadi ga perlu make unsplash lagi     
+            // backgroundImage: "/weather/sunny.jpg"
 
             overlay:
                 "linear-gradient(to right, rgba(255,255,255,0.88) 45%, rgba(255,255,255,0.1) 100%)",
