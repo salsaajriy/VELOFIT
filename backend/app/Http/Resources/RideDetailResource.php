@@ -23,7 +23,7 @@ class RideDetailResource extends JsonResource
             'route'      => $this->whenLoaded('locations', fn () =>
                 $this->locations->map(fn ($l) => [
                     'lat'         => $l->latitude,
-                    'lon'         => $l->longitude,
+                    'lng'         => $l->longitude,
                     'recorded_at' => $l->recorded_at->toISOString(),
                 ])
             ),

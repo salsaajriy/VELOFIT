@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import {api} from '@/services/api';
 import Sidebar from '@/components/sidebar';
 import RecentRides from '@/components/RecentRides';
-import RecentTarget from '@/components/RecentTarget';
-import HelmetBatteryCard from '@/components/HelmetBattery';
+import TargetCard from '@/components/RecentTarget';
+import HelmetStatusCard from '@/components/HelmetStatus';
 import CompleteProfileModal from '@/components/CompleteProfile';
+import TemperatureCard from '@/components/TemperatureCard';
 import { Weather } from '@/types';
 import { getWeatherTheme } from "@/utils/weatherTheme";
 
@@ -45,7 +46,6 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setWeatherLoading(false);
       return;
     }
 
@@ -97,11 +97,11 @@ export default function DashboardPage() {
                   </span>
               ) : weather ? (
                   <>
-                      <img
+                      {/* <img
                           src={weather.icon}
                           className="w-8 h-8"
                           alt={weather.condition}
-                      />
+                      /> */}
                       <span className="font-bold text-gray-800">
                           {weather.temperature}°C
                       </span>
@@ -113,10 +113,10 @@ export default function DashboardPage() {
                   <span>No weather</span>
               )}
           </div>
-            <h2 className="text-3xl font-black text-gray-900 leading-tight mb-5">
+            <h2 className="text-2xl font-black text-gray-900 leading-tight mb-5">
               {weatherTheme.title}
             </h2>
-            <p className="text-gray-500 mt">
+            <p className="text-gray-500 mb-6">
                 {weatherTheme.subtitle}
             </p>
             <div className="flex gap-3">
@@ -158,7 +158,6 @@ export default function DashboardPage() {
               <p className="text-xl font-black text-gray-900">0m</p>
             </div>
 
-            {/* Calories Card */}
             <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
               <div className="mb-3">
                 <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" className="w-6 h-6">
@@ -169,41 +168,23 @@ export default function DashboardPage() {
               <p className="text-xs text-gray-400 font-medium mb-1">Calories</p>
               <p className="text-xl font-black text-gray-900">0 kcal</p>
             </div>
-            <HelmetBatteryCard />
+            
+            <HelmetStatusCard />
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {/* Body Temperature */}
-          <div className="bg-white rounded-2xl p-5 border-2 border-red-100 shadow-sm">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center shrink-0">
-                <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" className="w-5 h-5">
-                  <path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z" />
-                </svg>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-red-500">Body Temperature</p>
-                <p className="text-xs text-gray-400">Threshold exceeded (37.5°C)</p>
-              </div>
-            </div>
-            <p className="text-2xl font-black text-gray-900 mt-4 mb-3">37°C</p>
-            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full rounded-full bg-gradient from-red-400 to-red-600" style={{ width: '72%' }} />
-            </div>
-          </div>
- 
-          <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
-            <RecentTarget />
-          </div>
+          <TemperatureCard />
+          <TargetCard />
         </div>
-          <RecentRides/>
+        
+        <RecentRides/>
 
-          {showProfileModal && (
-            <CompleteProfileModal
-              onClose={() => setShowProfileModal(false)}
-            />
-          )}
+        {showProfileModal && (
+          <CompleteProfileModal
+            onClose={() => setShowProfileModal(false)}
+          />
+        )}
       </main>
     </div>
   );

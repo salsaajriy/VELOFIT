@@ -13,19 +13,13 @@ class TargetController extends Controller
 {
     public function __construct(private TargetService $targetService) {}
 
-    /**
-     * GET /api/targets/active?type=daily
-     * Get active target with progress
-     */
     public function active(Request $request): JsonResponse
     {
-        $request->validate(['type' => 'required|in:daily,weekly']);
         $userId = $request->user()->id;
-        $type   = $request->query('type');
 
-        $target = $this->targetService->getActive($userId, $type);
+        $target = $this->targetService->getActive($userId);
 
-        if (! $target) {
+        if (!$target) {
             return response()->json([
                 'success' => false,
                 'data' => null,
@@ -33,14 +27,12 @@ class TargetController extends Controller
             ], 404);
         }
 
-        $progress = $this->targetService->computeProgress($userId, $target);
-
         return response()->json([
             'success' => true,
             'data' => [
                 ...(new TargetResource($target))->toArray($request),
-                'progress' => $progress,
-            ],
+                'progress' => $this->targetService->computeProgress($userId, $target),
+            ]
         ]);
     }
 
@@ -87,6 +79,15 @@ class TargetController extends Controller
         return response()->json([
             'success' => true,
             'data' => $this->targetService->weeklyBreakdown($request->user()->id, $weeks),
+        ]);
+    }
+
+    public function currentWeekBreakdown(Request $request): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $this->targetService
+                ->currentWeekDailyBreakdown($request->user()->id),
         ]);
     }
 

@@ -84,8 +84,8 @@ function ConfirmSwitchModal({ fromType, toType, onConfirm, onCancel }: {
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="w-72 bg-white rounded-xl p-5 text-center">
           <div className="w-10 h-10 mx-auto mb-3 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 text-lg">⟳</div>
-          <h3 className="font-semibold text-gray-900 mb-1">Switch View?</h3>
-          <p className="text-xs text-gray-900 mb-4">Switch from {label(fromType)} to {label(toType)} view?</p>
+          <h3 className="font-semibold text-gray-900 mb-1">Change Target Mode?</h3>
+          <p className="text-xs text-gray-900 mb-4">Current mode: {label(fromType)} <br /> New mode: {label(toType)} <br /> Your Preview target will remain <br /> available in history</p>
           <div className="flex gap-2">
             <button onClick={onCancel} className="flex-1 py-2 text-sm border rounded-lg text-gray-900">Cancel</button>
             <button onClick={onConfirm} className="flex-1 py-2 text-sm text-white bg-orange-500 rounded-lg">Switch</button>
@@ -122,8 +122,19 @@ export default function TargetPage() {
     setShowConfirm(true);
   };
 
-  const confirmSwitch = () => {
-    if (pendingType) setActiveType(pendingType);
+  const confirmSwitch = async () => {
+    if (!pendingType) return;
+
+    const defaultDistance =
+      pendingType === 'daily'
+        ? 10
+        : 50;
+
+    await setTarget(
+      pendingType,
+      defaultDistance
+    );
+
     setShowConfirm(false);
     setPendingType(null);
   };
@@ -138,7 +149,7 @@ export default function TargetPage() {
 
       <main className="flex-1 lg:ml-52 p-5">
         <div className="mb-5">
-          <h1 className="text-xl font-bold text-gray-900">Fitness Target</h1>
+          <h1 className="text-2xl font-black text-gray-900">Fitness Goals</h1>
           <p className="text-xs text-gray-900">Daily / Weekly goals</p>
         </div>
 
@@ -171,10 +182,17 @@ export default function TargetPage() {
         ) : (
           <>
             <div className="bg-white rounded-xl border p-5 mb-5">
+              <div className="inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-semibold">
+              ACTIVE MODE • {activeType.toUpperCase()}
+              </div>
               <div className="flex items-center justify-between mb-3">
                 <div>
-                  <p className="text-xs text-gray-900 uppercase">{activeType} target</p>
-                  <p className="text-2xl font-bold text-gray-900">{targetDistance} km</p>
+                  <p className="text-3xl font-bold text-gray-900">
+                  {currentProgress.toFixed(1)}
+                    <span className="text-lg text-gray-400">
+                      / {targetDistance} km
+                    </span>
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="text-xs text-gray-900">progress</p>
@@ -197,7 +215,8 @@ export default function TargetPage() {
                 <div><p className="text-gray-900">🏆 Best</p><p className="font-semibold text-gray-900">{stats?.best_day?.distance.toFixed(1) ?? '-'} km</p></div>
               </div>
             </div>
-
+            
+            {activeType === 'daily' && ( 
             <div className="bg-white rounded-xl border mb-5 overflow-hidden">
               <div className="px-4 py-3 border-b bg-gray-50">
                 <h3 className="text-sm font-medium text-gray-900">Daily Breakdown</h3>
@@ -219,9 +238,11 @@ export default function TargetPage() {
                     </div>
                   );
                 })}
-              </div>
+              </div>    
             </div>
+          )}
 
+            {activeType === 'daily' && ( 
             <div className="bg-white rounded-xl border p-4 mb-5">
               <h3 className="text-sm font-medium text-gray-900 mb-3">Weekly Comparison</h3>
               <div className="flex items-end gap-2 h-40">
@@ -241,6 +262,7 @@ export default function TargetPage() {
                 <span className="text-orange-500">■ Actual</span>
               </div>
             </div>
+            )}
 
             <div className="bg-white rounded-xl border p-4">
               <h3 className="text-sm font-medium text-gray-900 mb-2">History</h3>

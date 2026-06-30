@@ -34,8 +34,8 @@ async function request<T>(method: string, path: string, body?: unknown): Promise
 }
 
 export const targetApi = {
-  active: (type: TargetType) =>
-    request<{ data: ActiveTarget | null }>('GET', `/targets/active?type=${type}`),
+  active: () =>
+    request<{ data: ActiveTarget | null }>('GET', `/targets/active`),
 
   set: (type: TargetType, distance: number) =>
     request<{ message: string; data: Target }>('POST', '/targets', { type, distance }),
@@ -51,4 +51,9 @@ export const targetApi = {
 
   stats: (dailyTarget: number) =>
     request<{ data: TargetStats }>('GET', `/targets/stats?daily_target=${dailyTarget}`),
+
+  currentWeekBreakdown: () =>
+  request<{data: {day: string; date: string; distance: number;
+    }[];}>('GET','/targets/current-week-breakdown'),
+
 };

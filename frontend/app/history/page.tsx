@@ -143,13 +143,18 @@ export default function HistoryPage() {
   };
 
   useEffect(() => {
-    fetchHistory(page);
+    Promise.resolve().then(() => fetchHistory(page));
   }, [page]);
 
   useEffect(() => {
-    if (selectedRideId) {
-      fetchDetail(selectedRideId);
-    }
+    if (!selectedRideId) return;
+
+    const rideId = selectedRideId;
+    Promise.resolve().then(() => {
+      if (rideId === selectedRideId) {
+        fetchDetail(rideId);
+      }
+    });
   }, [selectedRideId]);
 
   // Calculate totals
@@ -170,7 +175,11 @@ export default function HistoryPage() {
     try {
       // Try to extract coordinates from sensor readings if available
       const rd = rideDetail as unknown as Record<string, unknown>;
-      const locations = rd.locations || rd.coords || [];
+      const locations =
+        rd.route ??
+        rd.locations ??
+        rd.coords ??
+        [];
       
       if (Array.isArray(locations) && locations.length > 0) {
         // Format: [[lat, lng], [lat, lng]]

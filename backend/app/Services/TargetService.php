@@ -9,15 +9,12 @@ use Illuminate\Support\Collection;
 
 class TargetService
 {
-    /**
-     * Get the user's currently active target of a given type.
-     */
-    public function getActive(int $userId, string $type): ?Target
+    public function getActive(int $userId): ?Target
     {
         return Target::where('user_id', $userId)
-                     ->where('type', $type)
-                     ->where('is_active', true)
-                     ->first();
+            ->where('is_active', true)
+            ->latest()
+            ->first();
     }
 
     /**
@@ -28,14 +25,12 @@ class TargetService
      */
     public function setTarget(int $userId, string $type, float $distance): Target
     {
-        $existing = $this->getActive($userId, $type);
-
-        if ($existing) {
-            $existing->update([
+        Target::where('user_id', $userId)
+            ->where('is_active', true)
+            ->update([
                 'is_active' => false,
-                'end_date'  => Carbon::today()->toDateString(),
+                'end_date' => Carbon::today()->toDateString(),
             ]);
-        }
 
         return Target::create([
             'user_id'    => $userId,
@@ -46,6 +41,8 @@ class TargetService
             'is_active'  => true,
         ]);
     }
+
+
 
     /**
      * All closed (inactive) targets, most recent first — this is the History list.
@@ -155,6 +152,30 @@ class TargetService
         return $result;
     }
 
+    public function currentWeekDailyBreakdown(int $userId): array
+    {
+        $start = Carbon::today()->startOfWeek(Carbon::MONDAY);
+
+        $result = [];
+
+        for ($i = 0; $i < 7; $i++) {
+            $date = $start->copy()->addDays($i);
+
+            $distance = Ride::where('user_id', $userId)
+                ->where('status', 'completed')
+                ->whereDate('end_time', $date)
+                ->sum('distance');
+
+            $result[] = [
+                'day' => $date->format('D'),
+                'date' => $date->toDateString(),
+                'distance' => round($distance, 2),
+            ];
+        }
+
+        return $result;
+    }
+
     /**
      * Number of days in the last $window days where distance >= the given daily target.
      */
@@ -207,19 +228,18 @@ class TargetService
         ];
     }
 
-    public function getActiveWithProgress(int $userId, string $type): ?array
+   public function getActiveWithProgress(int $userId): ?array
     {
-        $target = $this->getActive($userId, $type);
-        
+        $target = $this->getActive($userId);
+
         if (!$target) {
             return null;
         }
 
-        $progress = $this->computeProgress($userId, $target);
-
         return [
             'target' => $target,
-            'progress' => $progress,
+            'progress' => $this->computeProgress($userId, $target),
         ];
     }
+
 }

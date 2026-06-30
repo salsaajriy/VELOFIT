@@ -78,6 +78,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/daily-breakdown',  [TargetController::class, 'dailyBreakdown']);
         Route::get('/weekly-breakdown', [TargetController::class, 'weeklyBreakdown']);
         Route::get('/stats',            [TargetController::class, 'stats']);
+        Route::get('/current-week-breakdown', [TargetController::class, 'currentWeekBreakdown']);
     });
 
     Route::get('/weather/current', [WeatherController::class, 'current']);

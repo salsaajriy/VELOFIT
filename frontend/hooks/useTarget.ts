@@ -1,53 +1,82 @@
 'use client';
-
 import { useCallback, useEffect, useState } from 'react';
 import { targetApi } from '@/services/targetService';
 import type {
-  ActiveTarget, Target, TargetType,
-  DailyBreakdownEntry, WeeklyBreakdownEntry, TargetStats,
+ActiveTarget,
+Target,
+TargetType,
+DailyBreakdownEntry,
+WeeklyBreakdownEntry,
+TargetStats,
 } from '@/types/target';
-
 export function useTarget(activeType: TargetType) {
-  const [activeTarget, setActiveTarget] = useState<ActiveTarget | null>(null);
-  const [history, setHistory]           = useState<Target[]>([]);
-  const [dailyBreakdown, setDailyBreakdown]   = useState<DailyBreakdownEntry[]>([]);
-  const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyBreakdownEntry[]>([]);
-  const [stats, setStats]               = useState<TargetStats | null>(null);
-  const [loading, setLoading]           = useState(true);
-  const [error, setError]               = useState('');
+const [activeTarget, setActiveTarget] = useState<ActiveTarget | null>(null);
+const [history, setHistory] = useState<Target[]>([]);
+const [dailyBreakdown, setDailyBreakdown] = useState<DailyBreakdownEntry[]>([]);
+const [weeklyBreakdown, setWeeklyBreakdown] = useState<WeeklyBreakdownEntry[]>([]);
+const [stats, setStats] = useState<TargetStats | null>(null);
+const [loading, setLoading] = useState(true);
+const [error, setError] = useState('');
+const fetchAll = useCallback(async (fallbackType: TargetType) => {
+setLoading(true);
+setError('');
+try {
+  const activeRes = await targetApi.active();
 
-  const fetchAll = useCallback(async (type: TargetType) => {
-    setLoading(true);
-    setError('');
-    try {
-      const [activeRes, historyRes, dailyRes, weeklyRes] = await Promise.all([
-        targetApi.active(type),
-        targetApi.history(),
-        targetApi.dailyBreakdown(type === 'daily' ? 7 : 30),
-        targetApi.weeklyBreakdown(6),
-      ]);
+  const currentType =
+    activeRes.data?.type ??
+    fallbackType;
 
-      setActiveTarget(activeRes.data);
-      setHistory(historyRes.data);
-      setDailyBreakdown(dailyRes.data);
-      setWeeklyBreakdown(weeklyRes.data);
+  const [
+    historyRes,
+    dailyRes,
+    weeklyRes,
+  ] = await Promise.all([
+    targetApi.history(),
+    targetApi.dailyBreakdown(
+      currentType === 'daily' ? 7 : 30
+    ),
+    targetApi.weeklyBreakdown(6),
+  ]);
 
-      const dailyTargetValue = type === 'daily' ? activeRes.data?.distance ?? 5 : 5;
-      const statsRes = await targetApi.stats(dailyTargetValue);
-      setStats(statsRes.data);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load target data.');
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  setActiveTarget(activeRes.data);
+  setHistory(historyRes.data);
+  setDailyBreakdown(dailyRes.data);
+  setWeeklyBreakdown(weeklyRes.data);
 
-  useEffect(() => { fetchAll(activeType); }, [activeType, fetchAll]);
+  const dailyTargetValue =
+    currentType === 'daily'
+      ? activeRes.data?.distance ?? 5
+      : 5;
 
-  const setTarget = useCallback(async (type: TargetType, distance: number) => {
-    await targetApi.set(type, distance);
-    await fetchAll(type);
-  }, [fetchAll]);
+  const statsRes =
+    await targetApi.stats(dailyTargetValue);
+
+  setStats(statsRes.data);
+} catch (err: unknown) {
+  setError(
+    err instanceof Error
+      ? err.message
+      : 'Failed to load target data.'
+  );
+} finally {
+  setLoading(false);
+}
+
+}, []);
+
+  useEffect(() => {
+    void Promise.resolve().then(() => fetchAll(activeType));
+  }, [activeType, fetchAll]);
+
+  const setTarget = useCallback(
+
+    async (type: TargetType, distance: number) => {
+      await targetApi.set(type, distance);
+      await fetchAll(type);
+    },
+    [fetchAll]
+  );
 
   return {
     activeTarget,
@@ -57,7 +86,10 @@ export function useTarget(activeType: TargetType) {
     stats,
     loading,
     error,
-    setTarget,
-    refetch: () => fetchAll(activeType),
-  };
+setTarget,
+
+refetch: () => fetchAll(activeType),
+};
 }
+
+
