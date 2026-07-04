@@ -200,13 +200,23 @@ class ApiService {
     });
   }
 
+  async sendEmergency(rideId: number): Promise<void> {
+    await this.request('/emergency/send', {
+      method: 'POST',
+      body: JSON.stringify({
+        ride_id: rideId,
+      }),
+    });
+  }
+
   async getActiveRide(): Promise<Ride | null> {
     const response = await this.request<{ data: Ride | null }>('/rides/active');
     return response.data;
   }
 
-  async getRideHistory(page: number = 1): Promise<{ data: Ride[]; meta: { current_page: number; last_page: number; total: number } }> {
-    return this.request(`/rides/history?page=${page}`);
+  async getRideHistory(page: number = 1, perPage: number = 10): 
+    Promise<{data: Ride[];meta: {current_page: number;last_page: number;total: number;};}> {
+    return this.request(`/rides/history?page=${page}&per_page=${perPage}`);
   }
 
   async getRideDetail(rideId: number): Promise<RideDetail> {
@@ -237,6 +247,7 @@ class ApiService {
           `/weather/forecast?lat=${lat}&lng=${lng}`
       );
   }
+  
   
 }
 

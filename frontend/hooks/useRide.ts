@@ -23,6 +23,7 @@ export function useRide() {
 
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPointRef    = useRef<[number, number] | null>(null);
+  const emergencySentRef = useRef(false);
 
   const haversine = useCallback((lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
@@ -53,7 +54,30 @@ export function useRide() {
 
     addRoutePoint(lat, lon);
     lastPointRef.current = [lat, lon];
-  }, [sensorData, isRideActive]);
+  }, [sensorData, isRideActive, totalDistance, haversine, addRoutePoint, setCurrentSpeed, setTotalDistance]);
+
+  useEffect(() => {
+      if (!isRideActive || !sensorData || !activeRide) return;
+
+      if (sensorData.alert === 2 && !emergencySentRef.current) {
+          emergencySentRef.current = true;
+
+          console.log("🚨 Crash detected. Sending emergency...");
+
+          api.sendEmergency(activeRide.id)
+              .then(() => {
+                  console.log("✅ Emergency sent");
+              })
+              .catch((err) => {
+                  console.error(err);
+                  emergencySentRef.current = false;
+              });
+      }
+
+      if (sensorData.alert === 0) {
+          emergencySentRef.current = false;
+      }
+  }, [sensorData, activeRide, isRideActive]);
 
   const startRide = useCallback(async () => {
     if (!activeHelmet) throw new Error('No helmet connected.');
@@ -78,6 +102,8 @@ export function useRide() {
 
   const finishRide = useCallback(async () => {
     if (!activeRide) return;
+
+    emergencySentRef.current = false;
 
     // Stop syncing
     if (syncIntervalRef.current) {

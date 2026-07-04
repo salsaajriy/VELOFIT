@@ -28,13 +28,13 @@ export function useBLE() {
       setActiveHelmet(active);
 
       // Start streaming sensor data into global store
-      await bleService.startNotifications((data) => {
-        setSensorData(data);
-      });
-    } finally {
-      setIsConnecting(false);
-    }
-  }, [setActiveHelmet, setIsConnecting, setSensorData]);
+      await bleService.startNotifications(async(data) => {
+            setSensorData(data);
+          });
+        } finally {
+          setIsConnecting(false);
+        }
+      }, [setActiveHelmet, setIsConnecting, setSensorData]);
 
   const disconnect = useCallback(async (): Promise<void> => {
     await bleService.stopNotifications();

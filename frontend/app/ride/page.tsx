@@ -1,10 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect  } from 'react';
 import { useRide } from '@/hooks/useRide';
 import { useBLE } from '@/hooks/useBLE';
 import { useSensorStore } from '@/store/sensorStore';
-import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { 
@@ -77,53 +76,52 @@ export default function RidePage() {
   activeHelmet,
   cancelAlert,
 } = useBLE();
-  const sensorData = useSensorStore((s) => s.sensorData);
-  useEffect(() => {
-  console.log("Sensor:", sensorData);
-}, [sensorData]);
-  const routePoints = useSensorStore((s) => s.routePoints);
 
+  const sensorData = useSensorStore((s) => s.sensorData);
+  
+  useEffect(() => {
+    console.log("Sensor:", sensorData);
+  }, [sensorData]);
+
+  const routePoints = useSensorStore((s) => s.routePoints);
   const showCountdown = sensorData?.alert === 1;
   const showSOS = sensorData?.alert === 2;
-
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-
   const canStart = !isRideActive;
-
   const handleStart = async () => {
-    setError('');
+      setError('');
+      setLoading(true);
+
+    try {
+      console.log('isConnected:', isConnected);
+      console.log('activeHelmet:', activeHelmet);
+
+      if (!isConnected) {
+        await connect();
+      }
+
+      await startRide();
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Failed to start ride.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFinish = async () => {
     setLoading(true);
 
-  try {
-    console.log('isConnected:', isConnected);
-    console.log('activeHelmet:', activeHelmet);
-
-    if (!isConnected) {
-      await connect();
+    try {
+      await finishRide();
+    } finally {
+      setLoading(false);
     }
-
-    await startRide();
-  } catch (err: unknown) {
-    setError(
-      err instanceof Error
-        ? err.message
-        : 'Failed to start ride.'
-    );
-  } finally {
-    setLoading(false);
-  }
-};
-const handleFinish = async () => {
-  setLoading(true);
-
-  try {
-    await finishRide();
-  } finally {
-    setLoading(false);
-  }
-};
-
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 font-sans">
@@ -238,29 +236,29 @@ const handleFinish = async () => {
             </div>
 
             {/* ===== SOS ALERT BANNER ===== */}
-{showSOS && (
-  <div className="border-2 border-red-400 bg-red-50 rounded-2xl p-4 flex items-center justify-between">
-    <div className="flex items-center gap-3">
-      <AlertTriangle className="w-6 h-6 text-red-500" />
-      <span className="font-bold text-red-600">
-        🚨 SOS ALERT ACTIVE — Emergency detected!
-      </span>
-    </div>
+            {showSOS && (
+              <div className="border-2 border-red-400 bg-red-50 rounded-2xl p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="w-6 h-6 text-red-500" />
+                  <span className="font-bold text-red-600">
+                    🚨 SOS ALERT ACTIVE — Emergency detected!
+                  </span>
+                </div>
 
-    <button
-      onClick={async () => {
-        try {
-          await cancelAlert();
-        } catch (err) {
-          console.error(err);
-        }
-      }}
-      className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition"
-    >
-      Cancel Alert
-    </button>
-  </div>
-)}
+                <button
+                  onClick={async () => {
+                    try {
+                      await cancelAlert();
+                    } catch (err) {
+                      console.error(err);
+                    }
+                  }}
+                  className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold transition"
+                >
+                  Cancel Alert
+                </button>
+              </div>
+            )}
           </>
         ) : (
           // No sensor data yet
