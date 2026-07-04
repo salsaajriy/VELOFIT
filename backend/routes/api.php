@@ -11,6 +11,7 @@ use App\Http\Controllers\API\IoTController;
 use App\Http\Controllers\API\TargetController;
 use App\Http\Controllers\API\ForgotPasswordController;
 use App\Http\Controllers\API\WeatherController;
+use App\Http\Controllers\API\EmergencyController;
 
 //------------------------------------------------------------------
 // PUBLIC ROUTES (tidak perlu token)
@@ -83,4 +84,6 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/weather/current', [WeatherController::class, 'current']);
     Route::get('/weather/forecast', [WeatherController::class, 'forecast']);
+
+    Route::post('/emergency/send', [EmergencyController::class, 'send']);
 });
