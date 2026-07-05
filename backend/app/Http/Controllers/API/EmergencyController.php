@@ -16,14 +16,12 @@ class EmergencyController extends Controller
             'ride_id' => 'required|exists:rides,id',
         ]);
 
-        $user = request()->user();
+        $user = $request->user();
 
-        // Pastikan ride milik user
         $ride = Ride::where('id', $request->ride_id)
             ->where('user_id', $user->id)
             ->firstOrFail();
 
-        // Ambil lokasi terakhir
         $lastLocation = $ride->locations()
             ->latest('recorded_at')
             ->first();
@@ -35,55 +33,51 @@ class EmergencyController extends Controller
             ], 404);
         }
 
-        // Google Maps URL
-        $location = sprintf(
-            '%.6f,%.6f',
-            $lastLocation->latitude,
-            $lastLocation->longitude
-        );
+        $latitude = $lastLocation->latitude;
+        $longitude = $lastLocation->longitude;
 
+        $mapsUrl = "https://maps.google.com/?q={$latitude},{$longitude}";
         $time = Carbon::now()->format('d M Y H:i');
 
-        $sendWhatsapp = function ($phone, $contactName) use ($user, $time, $location) {
+        $sendWhatsapp = function ($phone, $contactName) use ($user, $time, $mapsUrl) {
 
-            if (!$phone) {
+            if (empty($phone)) {
                 return null;
             }
 
-            // Ubah 08xxxx menjadi 628xxxx
-            $phone = preg_replace('/^0/', '62', $phone);
+            // Bersihkan nomor
+            $phone = preg_replace('/\D/', '', $phone);
 
-            $response = Http::timeout(10)->post(
-                'https://console.zenziva.net/waofficial/api/sendnotif/',
-                [
-                    "userkey" => env('ZENZIVA_USERKEY'),
-                    "passkey" => env('ZENZIVA_PASSKEY'),
-                    "to" => $phone,
-                    "template" => [
-                        "name" => "velofit_emergency",
-                        "parameters" => [
-                            [
-                                "type" => "text",
-                                "text" => $contactName ?: "Emergency Contact"
-                            ],
-                            [
-                                "type" => "text",
-                                "text" => $user->name
-                            ],
-                            [
-                                "type" => "text",
-                                "text" => $time
-                            ],
-                            [
-                                "type" => "text",
-                                "text" => $location
-                            ]
-                        ]
-                    ]
-                ]
-            );
+            if (str_starts_with($phone, '08')) {
+                $phone = '62' . substr($phone, 1);
+            }
 
-            return $response->json();
+            $message =
+                "🚨 VELOFIT EMERGENCY ALERT\n\n" .
+                "Halo " . ($contactName ?: "Emergency Contact") . ",\n\n" .
+                "{$user->name} diduga mengalami kecelakaan saat bersepeda.\n\n" .
+                "Waktu : {$time}\n" .
+                "Lokasi : {$mapsUrl}\n\n" .
+                "Mohon segera hubungi atau datangi lokasi tersebut.";
+
+            $response = Http::withHeaders([
+                'Authorization' => env('FONNTE_TOKEN'),
+            ])
+                ->asForm()
+                ->timeout(30)
+                ->post('https://api.fonnte.com/send', [
+                    'target'  => $phone,
+                    'message' => $message,
+                    'schedule' => 0,
+                ]);
+
+            return [
+                'phone' => $phone,
+                'http_status' => $response->status(),
+                'success' => $response->successful(),
+                'body' => $response->body(),
+                'json' => $response->json(),
+            ];
         };
 
         $contact1 = $sendWhatsapp(

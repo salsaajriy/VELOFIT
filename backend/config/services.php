@@ -46,4 +46,8 @@ return [
         'base_url' => env('WEATHER_BASE_URL'),
     ],
 
+    'fonnte' => [
+        'token' => env('FONNTE_TOKEN'),
+    ],
+
 ];
