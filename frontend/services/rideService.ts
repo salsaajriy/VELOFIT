@@ -36,15 +36,15 @@ export const rideService = {
     });
   },
  
-  async pauseRide(rideId: number) {
-    const { data } = await api.post(`/rides/${rideId}/pause`);
-    return data.data;
-  },
+  // async pauseRide(rideId: number) {
+  //   const { data } = await api.post(`/rides/${rideId}/pause`);
+  //   return data.data;
+  // },
  
-  async resumeRide(rideId: number) {
-    const { data } = await api.post(`/rides/${rideId}/resume`);
-    return data.data;
-  },
+  // async resumeRide(rideId: number) {
+  //   const { data } = await api.post(`/rides/${rideId}/resume`);
+  //   return data.data;
+  // },
  
   async finishRide(rideId: number, stats: RideStats) {
     const { data } = await api.post(`/rides/${rideId}/finish`, {

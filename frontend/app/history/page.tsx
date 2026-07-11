@@ -3,7 +3,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import dynamic from 'next/dynamic';
 import { api } from '@/services/api';
-import Sidebar from '@/components/sidebar';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 
 import type { Ride, RideDetail } from '@/types';
 import { 
@@ -24,14 +25,27 @@ import Link from 'next/link';
 const RideMap = dynamic(() => import('@/components/RideMap'), { ssr: false });
 
 // ========== HELPERS ==========
-function formatDuration(seconds: number | null): string {
-  if (!seconds || seconds <= 0) return '-';
-  const h = Math.floor(seconds / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = seconds % 60;
-  if (h > 0) return `${h}h ${m}m`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
+function formatDuration(value: number | null): string {
+  if (!value || value < 0) return '0s';
+  
+  // Auto-detect: kalau nilainya > 100000, anggap milidetik
+  let seconds = value;
+  if (value > 100000) { // threshold masuk akal untuk milidetik
+    seconds = value / 1000;
+  }
+  
+  const roundedSeconds = Math.round(seconds);
+  
+  const hours = Math.floor(roundedSeconds / 3600);
+  const minutes = Math.floor((roundedSeconds % 3600) / 60);
+  const secs = roundedSeconds % 60;
+  
+  const parts = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+  
+  return parts.join(' ');
 }
 
 function formatDate(dateStr: string): string {
@@ -207,12 +221,15 @@ export default function HistoryPage() {
   const mapCoords = getMapCoords();
 
   return (
-    <div className="flex min-h-screen bg-gray-50 font-sans">
-      <Sidebar />
-      <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 flex flex-col overflow-hidden">
-        {/* ===== HEADER ===== */}
-        <div className="px-8 pt-8 pb-4 bg-white border-b border-gray-200">
-          <div className="flex items-center justify-between">
+    <div className="flex min-h-screen flex-col bg-gray-50 font-sans">
+      {/* Navbar */}
+      <Navbar />
+
+      {/* Main Content */}
+      <main className="flex-1 mx-4 px-4 py-4 lg:px-6 lg:py-6 pt-16 lg:pt-20">
+        <div className="mx-auto max-w-7xl">
+          {/* ===== HEADER ===== */}
+          <div className="flex items-center justify-between mb-6">
             <div>
               <h1 className="text-2xl font-black text-gray-900">Activity History</h1>
               <p className="text-sm text-gray-500 mt-1">
@@ -227,60 +244,49 @@ export default function HistoryPage() {
               </div>
             )}
           </div>
-        </div>
 
-        {/* ===== STATS BANNER ===== */}
-        {rides.length > 0 && (
-          <div className="px-8 pt-6">
-            <div className="bg-gradient-to-r from-orange-500 to-orange-600 rounded-2xl p-5 text-white shadow-lg shadow-orange-500/20">
-              <div className="grid grid-cols-4 gap-4">
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                    <TrendingUp className="w-4 h-4 opacity-80" />
-                    <p className="text-2xl font-black">{totals.count}</p>
+          {/* ===== STATS BANNER ===== */}
+          {rides.length > 0 && (
+            <div className="mb-6">
+              <div className="bg-linear-to-r from-orange-500 to-orange-600 rounded-2xl p-5 text-white shadow-lg shadow-orange-500/20">
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                      <TrendingUp className="w-4 h-4 opacity-80" />
+                      <p className="text-2xl font-black">{totals.count}</p>
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                      Total Rides
+                    </p>
                   </div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">
-                    Total Rides
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                    <MapPin className="w-4 h-4 opacity-80" />
-                    <p className="text-2xl font-black">{totals.distance.toFixed(1)}</p>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                      <MapPin className="w-4 h-4 opacity-80" />
+                      <p className="text-2xl font-black">{totals.distance.toFixed(1)}</p>
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                      Total KM
+                    </p>
                   </div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">
-                    Total KM
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                    <Clock className="w-4 h-4 opacity-80" />
-                    <p className="text-xl font-black">{formatDuration(totals.duration)}</p>
+                  <div className="text-center">
+                    <div className="flex items-center justify-center gap-1.5 mb-0.5">
+                      <Flame className="w-4 h-4 opacity-80" />
+                      <p className="text-2xl font-black">{totals.calories.toFixed(0)}</p>
+                    </div>
+                    <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">
+                      Total Kcal
+                    </p>
                   </div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">
-                    Total Time
-                  </p>
-                </div>
-                <div className="text-center">
-                  <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                    <Flame className="w-4 h-4 opacity-80" />
-                    <p className="text-2xl font-black">{totals.calories.toFixed(0)}</p>
-                  </div>
-                  <p className="text-[10px] font-bold uppercase tracking-wider opacity-80">
-                    Total Kcal
-                  </p>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* ===== MAIN CONTENT ===== */}
-        <div className="flex-1 px-8 py-6 overflow-hidden min-h-0">
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-full">
+          {/* ===== MAIN CONTENT ===== */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* ===== LEFT: RIDE LIST ===== */}
-            <div className="lg:col-span-2 flex flex-col overflow-hidden">
-              <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            <div className="lg:col-span-2 flex flex-col">
+              <div className="space-y-4">
                 {loading ? (
                   <>
                     {Array.from({ length: 3 }).map((_, i) => (
@@ -388,7 +394,7 @@ export default function HistoryPage() {
 
               {/* Pagination */}
               {rides.length > 0 && (
-                <div className="flex items-center justify-center gap-4 pt-4 mt-2 border-t border-gray-200">
+                <div className="flex items-center justify-center gap-4 pt-4 mt-4 border-t border-gray-200">
                   <button
                     onClick={() => setPage(Math.max(1, page - 1))}
                     disabled={page <= 1}
@@ -427,7 +433,7 @@ export default function HistoryPage() {
             </div>
 
             {/* ===== RIGHT: DETAIL PANEL ===== */}
-            <div className="flex flex-col gap-4 overflow-y-auto">
+            <div className="flex flex-col gap-4">
               {/* Map */}
               <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm shrink-0">
                 <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -526,6 +532,9 @@ export default function HistoryPage() {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

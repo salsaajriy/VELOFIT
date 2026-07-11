@@ -67,12 +67,15 @@ function SidebarContent({
         <div className="flex items-center gap-2.5">
           <div
             className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-            style={{ background: 'linear-gradient(135deg, #f97316, #3b82f6)' }}
           >
-            <svg viewBox="0 0 24 24" fill="white" className="h-4 w-4">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z" />
-            </svg>
+            <Image
+                src="/images/logo-velofit.jpeg"
+                alt="Velofit Logo"
+                width={36}
+                height={36}
+                className="h-full w-full object-contain"  // ← GANTI object-cover → object-contain
+                priority
+              />
           </div>
           <span className="text-base font-black tracking-tight text-gray-900">
             Velofit

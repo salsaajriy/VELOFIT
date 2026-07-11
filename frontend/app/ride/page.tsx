@@ -69,13 +69,8 @@ function StatCard({
 
 // ========== MAIN COMPONENT ==========
 export default function RidePage() {
-  const { startRide, finishRide, isRideActive, activeRide, totalDistance, currentSpeed } = useRide();
-  const {
-  connect,
-  isConnected,
-  activeHelmet,
-  cancelAlert,
-} = useBLE();
+  const { startRide, finishRide, isRideActive, activeRide, totalDistance, currentSpeed, duration } = useRide();
+  const { connect, isConnected, activeHelmet, cancelAlert, } = useBLE();
 
   const sensorData = useSensorStore((s) => s.sensorData);
   
@@ -121,6 +116,18 @@ export default function RidePage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const formatDuration = (seconds: number) => {
+      const hrs = Math.floor(seconds / 3600);
+      const mins = Math.floor((seconds % 3600) / 60);
+      const secs = seconds % 60;
+
+      return [
+          hrs.toString().padStart(2, '0'),
+          mins.toString().padStart(2, '0'),
+          secs.toString().padStart(2, '0'),
+      ].join(':');
   };
 
   return (
@@ -232,6 +239,12 @@ export default function RidePage() {
                 value={`${totalDistance.toFixed(2)} km`}
                 icon={<TrendingUp className="w-4 h-4" />}
                 color="orange"
+              />
+              <StatCard
+                label="Duration"
+                value={formatDuration(duration)}
+                icon={<Clock className="w-4 h-4" />}
+                color="blue"
               />
             </div>
 

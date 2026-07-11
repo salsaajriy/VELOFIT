@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Sidebar from '@/components/sidebar';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import Image from 'next/image';
 
 export default function ProfilePage() {
@@ -275,14 +276,15 @@ export default function ProfilePage() {
   // Loading state yang lebih baik
   if (isLoading) {
     return (
-      <div className="flex min-h-screen bg-gray-50">
-        <Sidebar />
-        <main className="flex-1 lg:ml-52 flex items-center justify-center">
+      <div className="flex min-h-screen flex-col bg-gray-50">
+        <Navbar />
+        <main className="flex-1 flex items-center justify-center">
           <div className="text-center">
             <div className="w-12 h-12 border-4 border-orange-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
             <p className="text-gray-500">Loading profile...</p>
           </div>
         </main>
+        <Footer />
       </div>
     );
   }
@@ -290,11 +292,13 @@ export default function ProfilePage() {
   const bmiProgress = bmiData.bmi > 0 ? Math.min(Math.max(((bmiData.bmi - 10) / 30) * 100, 0), 100) : 0;
 
   return (
-    <div className="flex min-h-screen bg-linear-to-br from-gray-50 to-gray-100">
-      <Sidebar />
+    <div className="flex min-h-screen flex-col bg-linear-to-br from-gray-50 to-gray-100">
+      {/* Navbar */}
+      <Navbar />
 
-      <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 overflow-y-auto">
-        <div className="max-w-6xl mx-auto p-6">
+      {/* Main Content */}
+      <main className="flex-1 mx-4 px-4 py-4 lg:px-6 lg:py-6 pt-16 lg:pt-20">
+        <div className="mx-auto max-w-7xl">
           <h1 className="text-2xl font-black text-gray-900 mb-6">Profile Settings</h1>
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -613,6 +617,9 @@ export default function ProfilePage() {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

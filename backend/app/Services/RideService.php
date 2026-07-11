@@ -157,7 +157,8 @@ class RideService
         $locations = $ride->locations()->orderBy('recorded_at')->get();
         $distance  = $this->calculateTotalDistance($locations); 
 
-        $duration = $endTime->diffInSeconds($ride->start_time);
+        //ini yg diganti
+        $duration = $ride->start_time->diffInSeconds($endTime);
         
         $avgSpeed = $duration > 0 ? ($distance / ($duration / 3600)) : 0;
         

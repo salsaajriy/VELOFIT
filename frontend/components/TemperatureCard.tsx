@@ -19,22 +19,25 @@ export default function TemperatureCard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLatestTemperature = async () => {
-      try {
-        setLoading(true);
-        // Ambil riwayat ride terbaru
-        const res = await api.getRideHistory(1);
-        if (res.data && res.data.length > 0) {
-          const latest = res.data[0];
-          const detail = await api.getRideDetail(latest.id);
-          setLatestRide(detail as unknown as RideDetail);
+    const fetchLatestTemperature = async (showLoading = false) => {
+        try {
+            if (showLoading) {
+                setLoading(true);
+            }
+
+            const res = await api.getRideHistory(1);
+
+            if (res.data.length > 0) {
+                const detail = await api.getRideDetail(res.data[0].id);
+                setLatestRide(detail as RideDetail);
+            }
+
+        } finally {
+            if (showLoading) {
+                setLoading(false);
+            }
         }
-      } catch (error) {
-        console.error('Failed to fetch latest temperature:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
+    }
 
     fetchLatestTemperature();
 

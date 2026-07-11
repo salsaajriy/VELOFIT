@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/services/api';
 import { useSensorStore } from '@/store/sensorStore';
 
@@ -24,6 +24,7 @@ export function useRide() {
   const syncIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastPointRef    = useRef<[number, number] | null>(null);
   const emergencySentRef = useRef(false);
+  const [duration, setDuration] = useState(0);
 
   const haversine = useCallback((lat1: number, lon1: number, lat2: number, lon2: number) => {
     const R = 6371;
@@ -79,6 +80,25 @@ export function useRide() {
       }
   }, [sensorData, activeRide, isRideActive]);
 
+  useEffect(() => {
+    if (!activeRide || !isRideActive) return;
+
+    const startTime = new Date(activeRide.start_time).getTime();
+
+    const updateDuration = () => {
+      setDuration(Math.floor((Date.now() - startTime) / 1000));
+    };
+
+    updateDuration();
+
+    const timer = setInterval(updateDuration, 1000);
+
+    return () => {
+      clearInterval(timer);
+      setDuration(0);
+    };
+  }, [activeRide, isRideActive]);
+
   const startRide = useCallback(async () => {
     if (!activeHelmet) throw new Error('No helmet connected.');
     resetRideStats();
@@ -124,5 +144,6 @@ export function useRide() {
     currentSpeed: useSensorStore.getState().currentSpeed,
     totalDistance,
     routePoints,
+    duration,
   };
 }

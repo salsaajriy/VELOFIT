@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import Sidebar from '@/components/sidebar';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { useTarget } from '@/hooks/useTarget';
 import type { TargetType } from '@/types/target';
 
@@ -144,154 +145,161 @@ export default function TargetPage() {
   };
 
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      {/* Navbar */}
+      <Navbar />
 
-      <main className="flex-1 lg:ml-52 p-5">
-        <div className="mb-5">
-          <h1 className="text-2xl font-black text-gray-900">Fitness Goals</h1>
-          <p className="text-xs text-gray-900">Daily / Weekly goals</p>
-        </div>
+      {/* Main Content */}
+      <main className="flex-1 mx-4 px-4 py-4 lg:px-6 lg:py-6 pt-16 lg:pt-20">
+        <div className="mx-auto max-w-7xl">
+          <div className="mb-5">
+            <h1 className="text-2xl font-black text-gray-900">Fitness Target</h1>
+            <p className="text-xs text-gray-900">Daily / Weekly goals</p>
+          </div>
 
-        {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
+          {error && <p className="text-sm text-red-500 mb-4">{error}</p>}
 
-        <div className='grid grid-cols-2 gap-3 mt-3 pt-3 border-t text-sm'>
+          <div className='grid grid-cols-2 gap-3 mt-3 pt-3 border-t text-sm'>
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-fit mb-5">
-            {(['daily', 'weekly'] as TargetType[]).map((t) => (
+              {(['daily', 'weekly'] as TargetType[]).map((t) => (
                 <button
-                key={t}
-                onClick={() => handleSwitch(t)}
-                className={`px-5 py-1.5 text-sm rounded-md transition-all ${
+                  key={t}
+                  onClick={() => handleSwitch(t)}
+                  className={`px-5 py-1.5 text-sm rounded-md transition-all ${
                     activeType === t ? 'bg-white shadow text-gray-900' : 'text-gray-900'
-                }`}
+                  }`}
                 >
-                {t === 'daily' ? 'Daily' : 'Weekly'}
+                  {t === 'daily' ? 'Daily' : 'Weekly'}
                 </button>
-            ))} 
+              ))} 
             </div>
-                <button
-                    onClick={() => setShowModal(true)}
-                    className="w-full py-2 mb-5 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50"
-                        >
-                    ✎ Update {activeType === 'daily' ? 'Daily' : 'Weekly'} Target
-                </button>
-        </div>
+            <button
+              onClick={() => setShowModal(true)}
+              className="w-full py-2 mb-5 text-sm font-medium text-orange-600 border border-orange-200 rounded-lg hover:bg-orange-50"
+            >
+              ✎ Update {activeType === 'daily' ? 'Daily' : 'Weekly'} Target
+            </button>
+          </div>
 
-        {loading ? (
-          <p className="text-sm text-gray-900">Loading…</p>
-        ) : (
-          <>
-            <div className="bg-white rounded-xl border p-5 mb-5">
-              <div className="inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-semibold">
-              ACTIVE MODE • {activeType.toUpperCase()}
-              </div>
-              <div className="flex items-center justify-between mb-3">
-                <div>
-                  <p className="text-3xl font-bold text-gray-900">
-                  {currentProgress.toFixed(1)}
-                    <span className="text-lg text-gray-400">
-                      / {targetDistance} km
-                    </span>
-                  </p>
+          {loading ? (
+            <p className="text-sm text-gray-900">Loading…</p>
+          ) : (
+            <>
+              <div className="bg-white rounded-xl border p-5 mb-5">
+                <div className="inline-flex items-center px-3 py-1 rounded-full bg-orange-100 text-orange-600 text-xs font-semibold">
+                  ACTIVE MODE • {activeType.toUpperCase()}
                 </div>
-                <div className="text-right">
-                  <p className="text-xs text-gray-900">progress</p>
-                  <p className="text-xl font-bold text-gray-900">{percent}%</p>
-                </div>
-              </div>
-
-              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-4">
-                <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${percent}%` }} />
-              </div>
-
-              <div className="grid grid-cols-3 gap-3 text-center text-sm">
-                <div><p className="text-gray-900">Current</p><p className="font-semibold text-gray-900">{currentProgress.toFixed(1)} km</p></div>
-                <div><p className="text-gray-900">Remaining</p><p className="font-semibold text-gray-900">{remaining.toFixed(1)} km</p></div>
-                <div><p className="text-gray-900">Daily avg</p><p className="font-semibold text-gray-900">{(currentProgress / (activeType === 'daily' ? 1 : 7)).toFixed(1)} km</p></div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t text-sm">
-                <div><p className="text-gray-900">🔥 Streak</p><p className="font-semibold text-gray-900">{stats?.streak ?? 0} days</p></div>
-                <div><p className="text-gray-900">🏆 Best</p><p className="font-semibold text-gray-900">{stats?.best_day?.distance.toFixed(1) ?? '-'} km</p></div>
-              </div>
-            </div>
-            
-            {activeType === 'daily' && ( 
-            <div className="bg-white rounded-xl border mb-5 overflow-hidden">
-              <div className="px-4 py-3 border-b bg-gray-50">
-                <h3 className="text-sm font-medium text-gray-900">Daily Breakdown</h3>
-              </div>
-              <div className="divide-y">
-                {(activeType === 'daily' ? dailyBreakdown.slice(-7) : dailyBreakdown.slice(-7)).map((day) => {
-                  const dayPercent = Math.min(Math.round((day.distance / dailyTargetForBreakdown) * 100), 100);
-                  const achieved = activeType === 'daily' && day.distance >= targetDistance;
-                  return (
-                    <div key={day.date} className="px-4 py-2 flex items-center justify-between text-sm">
-                      <span className="w-16 font-medium text-gray-900">{formatDayName(day.date)}</span>
-                      <span className={`font-mono ${achieved ? 'text-green-600' : 'text-gray-900'}`}>
-                        {day.distance.toFixed(1)} km
+                <div className="flex items-center justify-between mb-3">
+                  <div>
+                    <p className="text-3xl font-bold text-gray-900">
+                      {currentProgress.toFixed(1)}
+                      <span className="text-lg text-gray-400">
+                        / {targetDistance} km
                       </span>
-                      <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                        <div className={`h-full rounded-full ${achieved ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${dayPercent}%` }} />
-                      </div>
-                      <span className="w-12 text-right text-xs text-gray-900">{dayPercent}%</span>
-                    </div>
-                  );
-                })}
-              </div>    
-            </div>
-          )}
-
-            {activeType === 'daily' && ( 
-            <div className="bg-white rounded-xl border p-4 mb-5">
-              <h3 className="text-sm font-medium text-gray-900 mb-3">Weekly Comparison</h3>
-              <div className="flex items-end gap-2 h-40">
-                {weeklyBreakdown.map((week) => (
-                  <div key={week.week_start} className="flex-1 flex flex-col items-center gap-1">
-                    <div className="relative flex items-end gap-1 w-full justify-center h-32">
-                      <div className="w-6 bg-gray-200 rounded-t" style={{ height: `${((week.target ?? 0) / maxValue) * 100}%` }} />
-                      <div className="w-6 bg-orange-500 rounded-t" style={{ height: `${(week.total / maxValue) * 100}%` }} />
-                    </div>
-                    <span className="text-[10px] text-gray-900">{formatDate(week.week_start)}</span>
-                    <span className="text-[10px] font-mono text-gray-900">{week.total.toFixed(0)}/{week.target ?? '-'}km</span>
+                    </p>
                   </div>
-                ))}
-              </div>
-              <div className="flex justify-center gap-4 mt-3 pt-2 text-[10px] text-gray-900">
-                <span>■ Target</span>
-                <span className="text-orange-500">■ Actual</span>
-              </div>
-            </div>
-            )}
+                  <div className="text-right">
+                    <p className="text-xs text-gray-900">progress</p>
+                    <p className="text-xl font-bold text-gray-900">{percent}%</p>
+                  </div>
+                </div>
 
-            <div className="bg-white rounded-xl border p-4">
-              <h3 className="text-sm font-medium text-gray-900 mb-2">History</h3>
-              {history.length === 0 ? (
-                <p className="text-xs text-gray-900">No previous targets yet.</p>
-              ) : (
-                <div className="space-y-2">
-                  {history.map((h) => (
-                    <div key={h.id} className="flex items-center gap-2 text-xs">
-                      <span className={`px-1.5 py-0.5 rounded ${h.type === 'daily' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
-                        {h.type === 'daily' ? 'Daily' : 'Weekly'}
-                      </span>
-                      <span className="text-gray-900">{formatDate(h.start_date)}</span>
-                      <span className="text-gray-900">{h.distance} km</span>
-                      {h.end_date && <span className="text-gray-900">→ {formatDate(h.end_date)}</span>}
-                    </div>
-                  ))}
+                <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden mb-4">
+                  <div className="h-full bg-orange-500 rounded-full transition-all" style={{ width: `${percent}%` }} />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3 text-center text-sm">
+                  <div><p className="text-gray-900">Current</p><p className="font-semibold text-gray-900">{currentProgress.toFixed(1)} km</p></div>
+                  <div><p className="text-gray-900">Remaining</p><p className="font-semibold text-gray-900">{remaining.toFixed(1)} km</p></div>
+                  <div><p className="text-gray-900">Daily avg</p><p className="font-semibold text-gray-900">{(currentProgress / (activeType === 'daily' ? 1 : 7)).toFixed(1)} km</p></div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-3 pt-3 border-t text-sm">
+                  <div><p className="text-gray-900">🔥 Streak</p><p className="font-semibold text-gray-900">{stats?.streak ?? 0} days</p></div>
+                  <div><p className="text-gray-900">🏆 Best</p><p className="font-semibold text-gray-900">{stats?.best_day?.distance.toFixed(1) ?? '-'} km</p></div>
+                </div>
+              </div>
+              
+              {activeType === 'daily' && ( 
+                <div className="bg-white rounded-xl border mb-5 overflow-hidden">
+                  <div className="px-4 py-3 border-b bg-gray-50">
+                    <h3 className="text-sm font-medium text-gray-900">Daily Breakdown</h3>
+                  </div>
+                  <div className="divide-y">
+                    {(activeType === 'daily' ? dailyBreakdown.slice(-7) : dailyBreakdown.slice(-7)).map((day) => {
+                      const dayPercent = Math.min(Math.round((day.distance / dailyTargetForBreakdown) * 100), 100);
+                      const achieved = activeType === 'daily' && day.distance >= targetDistance;
+                      return (
+                        <div key={day.date} className="px-4 py-2 flex items-center justify-between text-sm">
+                          <span className="w-16 font-medium text-gray-900">{formatDayName(day.date)}</span>
+                          <span className={`font-mono ${achieved ? 'text-green-600' : 'text-gray-900'}`}>
+                            {day.distance.toFixed(1)} km
+                          </span>
+                          <div className="w-24 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div className={`h-full rounded-full ${achieved ? 'bg-green-500' : 'bg-orange-500'}`} style={{ width: `${dayPercent}%` }} />
+                          </div>
+                          <span className="w-12 text-right text-xs text-gray-900">{dayPercent}%</span>
+                        </div>
+                      );
+                    })}
+                  </div>    
                 </div>
               )}
-            </div>
 
-            <div className="mt-4 p-3 bg-gray-100 rounded-lg">
-              <p className="text-[11px] text-gray-900">
-                💡 <strong>Daily</strong>: consistent daily target | <strong>Weekly</strong>: flexible weekly total
-              </p>
-            </div>
-          </>
-        )}
+              {activeType === 'daily' && ( 
+                <div className="bg-white rounded-xl border p-4 mb-5">
+                  <h3 className="text-sm font-medium text-gray-900 mb-3">Weekly Comparison</h3>
+                  <div className="flex items-end gap-2 h-40">
+                    {weeklyBreakdown.map((week) => (
+                      <div key={week.week_start} className="flex-1 flex flex-col items-center gap-1">
+                        <div className="relative flex items-end gap-1 w-full justify-center h-32">
+                          <div className="w-6 bg-gray-200 rounded-t" style={{ height: `${((week.target ?? 0) / maxValue) * 100}%` }} />
+                          <div className="w-6 bg-orange-500 rounded-t" style={{ height: `${(week.total / maxValue) * 100}%` }} />
+                        </div>
+                        <span className="text-[10px] text-gray-900">{formatDate(week.week_start)}</span>
+                        <span className="text-[10px] font-mono text-gray-900">{week.total.toFixed(0)}/{week.target ?? '-'}km</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-center gap-4 mt-3 pt-2 text-[10px] text-gray-900">
+                    <span>■ Target</span>
+                    <span className="text-orange-500">■ Actual</span>
+                  </div>
+                </div>
+              )}
+
+              <div className="bg-white rounded-xl border p-4">
+                <h3 className="text-sm font-medium text-gray-900 mb-2">History</h3>
+                {history.length === 0 ? (
+                  <p className="text-xs text-gray-900">No previous targets yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {history.map((h) => (
+                      <div key={h.id} className="flex items-center gap-2 text-xs">
+                        <span className={`px-1.5 py-0.5 rounded ${h.type === 'daily' ? 'bg-blue-100 text-blue-700' : 'bg-purple-100 text-purple-700'}`}>
+                          {h.type === 'daily' ? 'Daily' : 'Weekly'}
+                        </span>
+                        <span className="text-gray-900">{formatDate(h.start_date)}</span>
+                        <span className="text-gray-900">{h.distance} km</span>
+                        {h.end_date && <span className="text-gray-900">→ {formatDate(h.end_date)}</span>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+                <p className="text-[11px] text-gray-900">
+                  💡 <strong>Daily</strong>: consistent daily target | <strong>Weekly</strong>: flexible weekly total
+                </p>
+              </div>
+            </>
+          )}
+        </div>
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       {showModal && (
         <AddTargetModal

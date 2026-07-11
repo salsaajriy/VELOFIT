@@ -2,7 +2,8 @@
 
 import { Line, XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine, Area, ComposedChart } from 'recharts';
 import { useState, useEffect } from 'react';
-import Sidebar from '@/components/sidebar';
+import Navbar from '@/components/Navbar';
+import Footer from '@/components/Footer';
 import { api } from '@/services/api';
 import { 
   Thermometer,
@@ -515,21 +516,23 @@ export default function TemperatureHistoryPage() {
 
   // ── Render ─────────────────────────────────────────────────────────────
   return (
-    <div className="flex min-h-screen bg-gray-50">
-      <Sidebar />
-      <main className="flex-1 lg:ml-52 pt-14 lg:pt-0 p-6 lg:p-8 overflow-y-auto">
-        {/* ===== HEADER ===== */}
-        <div className="flex items-start justify-between my-6 gap-4">
-          <div>
-            <h1 className="text-2xl font-black text-gray-900">Body Temperature History</h1>
-            <p className="text-sm text-gray-400 mt-1">
-              Real-time health telemetry and historical worker safety data.
-            </p>
-          </div>
-        </div>
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      {/* Navbar */}
+      <Navbar />
 
-        {/* ===== CONTENT ===== */}
-        <div className="max-w-4xl">
+      {/* Main Content */}
+      <main className="flex-1 mx-4 px-4 py-4 lg:px-6 lg:py-6 pt-16 lg:pt-20">
+        <div className="mx-auto max-w-7xl">
+          {/* ===== HEADER ===== */}
+          <div className="flex items-start justify-between mb-6 gap-4">
+            <div>
+              <h1 className="text-2xl font-black text-gray-900">Body Temperature History</h1>
+              <p className="text-sm text-gray-400 mt-1">
+                Real-time health telemetry and historical worker safety data.
+              </p>
+            </div>
+          </div>
+
           {/* ===== STATS ===== */}
           {rides.length > 0 && allTemps.length > 0 && (
             <div className="grid grid-cols-3 gap-3 mb-6">
@@ -731,6 +734,9 @@ export default function TemperatureHistoryPage() {
           )}
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

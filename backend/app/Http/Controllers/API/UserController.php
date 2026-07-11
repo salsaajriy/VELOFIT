@@ -6,17 +6,65 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\User;
 use App\Models\Helmet;
+use App\Models\Ride;
+use App\Models\Target;
+use App\Models\SensorReading;
 
 class UserController extends Controller
 {
     public function dashboard(Request $request)
     {
+        $user = $request->user();
+
+        // Gunakan with() untuk eager loading jika perlu
+        $lastRide = Ride::where('user_id', $user->id)
+            ->where('status', 'completed')
+            ->latest('created_at') // lebih spesifik
+            ->first();
+
+        $temperature = null;
+
+        if ($lastRide) {
+            $temperature = $lastRide->sensorReadings()
+                ->latest('recorded_at')
+                ->first();
+        }
+
+        $target = Target::where('user_id', $user->id)
+            ->latest('created_at')
+            ->first();
+
+        $helmet = Helmet::where('user_id', $user->id)
+            ->latest('created_at')
+            ->first();
+
+        // Perhitungan progress dengan validasi lebih baik
+        $progress = 0;
+        if ($target && $target->distance > 0 && $lastRide) {
+            $progress = min(
+                round(($lastRide->distance / $target->distance) * 100),
+                100
+            );
+        }
+
         return response()->json([
             'status' => true,
-            'message' => 'Selamat datang di dashboard user!',
+            'message' => 'Dashboard data retrieved successfully',
             'data' => [
-                'user' => $request->user(),
-                'logged_in_at' => now()->toDateTimeString(),
+                'summary' => [
+                    'distance' => $lastRide?->distance ?? 0,
+                    'calories' => $lastRide?->calories ?? 0,
+                    'duration' => $lastRide?->duration ?? 0,
+                    'helmet' => [
+                        'name' => $helmet?->bluetooth_device_name ?? 'No helmet connected',
+                        'battery' => $helmet?->battery_level ?? 0
+                    ],
+                    'goal' => [
+                        'target_distance' => $target?->distance ?? 0,
+                        'progress' => $progress
+                    ],
+                    'temperature' => $temperature?->body_temperature ?? 0
+                ]
             ]
         ]);
     }

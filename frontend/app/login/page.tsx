@@ -8,17 +8,23 @@ import { FcGoogle } from "react-icons/fc";
 import { FaBatteryFull } from "react-icons/fa6";
 import { MdEmail, MdLock } from "react-icons/md";
 import { AiTwotoneSafetyCertificate } from "react-icons/ai";
-import Footer from "@/components/footer";
+import Footer from "@/components/Footer";
 
 function IconEmail() {
   return (
-    <MdEmail className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+    <MdEmail
+      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+      size={18}
+    />
   );
 }
 
 function IconLock() {
   return (
-    <MdLock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={18} />
+    <MdLock
+      className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+      size={18}
+    />
   );
 }
 
@@ -26,7 +32,9 @@ function StatusChip({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
     <div className="flex items-center gap-2 bg-white border border-[#e0ddd8] rounded-xl px-4 py-2.5 shadow-[0_2px_6px_rgba(0,0,0,0.04)]">
       <span className="text-base leading-none">{icon}</span>
-      <span className="font-dm text-[0.82rem] font-medium text-gray-800">{label}</span>
+      <span className="font-dm text-[0.82rem] font-medium text-gray-800">
+        {label}
+      </span>
     </div>
   );
 }
@@ -37,7 +45,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+  const BACKEND_URL =
+    process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
   const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -50,7 +59,7 @@ export default function Login() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
+          Accept: "application/json",
         },
         body: JSON.stringify(form),
       });
@@ -83,7 +92,6 @@ export default function Login() {
       } else {
         router.push("/dashboard");
       }
-
     } catch (err: unknown) {
       console.error("LOGIN ERROR:", err);
       setError((err as Error).message || "Login gagal");
@@ -103,7 +111,7 @@ export default function Login() {
         window.location.href = data.redirect_url;
       }
     } catch (error: unknown) {
-      console.error('Google login error:', error);
+      console.error("Google login error:", error);
     }
   };
 
@@ -120,11 +128,13 @@ export default function Login() {
         .animate-fade-up { animation: fadeUp 0.45s ease both; }
       `}</style>
 
-      <div className="min-h-screen flex flex-col font-dm" style={{ backgroundColor: "#f0ede8" }}>
-
+      <div
+        className="min-h-screen flex flex-col font-dm"
+        style={{ backgroundColor: "#f0ede8" }}
+      >
         <nav
           className="sticky top-0 z-50 flex items-center justify-between h-16 px-8 md:px-12"
-          style={{ 
+          style={{
             borderBottom: "1px solid #e8e4de",
             backgroundColor: "#f0ede8",
           }}
@@ -144,8 +154,12 @@ export default function Login() {
               href="/registration"
               className="font-dm text-sm font-semibold text-white px-5 py-2 rounded-md transition-colors"
               style={{ backgroundColor: "#b85c08" }}
-              onMouseOver={(e) => (e.currentTarget.style.backgroundColor = "#9a4d06")}
-              onMouseOut={(e) => (e.currentTarget.style.backgroundColor = "#b85c08")}
+              onMouseOver={(e) =>
+                (e.currentTarget.style.backgroundColor = "#9a4d06")
+              }
+              onMouseOut={(e) =>
+                (e.currentTarget.style.backgroundColor = "#b85c08")
+              }
             >
               Sign Up
             </Link>
@@ -162,9 +176,18 @@ export default function Login() {
                 V1.0 VERSION
               </span>
               <span className="flex gap-1.5 items-center">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#e07230" }} />
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#f0a870" }} />
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: "#d94f2b" }} />
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: "#e07230" }}
+                />
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: "#f0a870" }}
+                />
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: "#d94f2b" }}
+                />
               </span>
             </div>
 
@@ -172,7 +195,8 @@ export default function Login() {
               className="font-extrabold leading-[1.1] tracking-tight text-gray-900 mb-5"
               style={{ fontSize: "clamp(2.3rem, 4vw, 3.1rem)" }}
             >
-              Gear up for the<br />
+              Gear up for the
+              <br />
               <span style={{ color: "#c45c0a" }}>next ride.</span>
             </h1>
 
@@ -197,14 +221,17 @@ export default function Login() {
               className="font-dm leading-relaxed text-gray-600 max-w-sm mb-8"
               style={{ fontSize: "0.95rem" }}
             >
-              Access your helmet&apos;s telemetry, safety logs, and
-              heads-up display preferences in one secure cockpit.
+              Access your helmet&apos;s telemetry, safety logs, and heads-up
+              display preferences in one secure cockpit.
             </p>
 
             <div className="flex flex-wrap gap-3 justify-center lg:justify-start">
               <StatusChip icon={<FaSync />} label="Active Sync" />
               <StatusChip icon={<FaBatteryFull />} label="Battery 98%" />
-              <StatusChip icon={<AiTwotoneSafetyCertificate />} label="System OK" />
+              <StatusChip
+                icon={<AiTwotoneSafetyCertificate />}
+                label="System OK"
+              />
             </div>
           </section>
 
@@ -240,7 +267,9 @@ export default function Login() {
                       type="email"
                       placeholder="Enter your email"
                       value={form.email}
-                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, email: e.target.value })
+                      }
                       required
                       autoComplete="email"
                       className="w-full rounded-xl pl-10 pr-4 py-3 font-dm text-sm text-gray-900 outline-none transition-all placeholder-gray-400"
@@ -279,7 +308,9 @@ export default function Login() {
                       type="password"
                       placeholder="Enter your password"
                       value={form.password}
-                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      onChange={(e) =>
+                        setForm({ ...form, password: e.target.value })
+                      }
                       required
                       autoComplete="current-password"
                       className="w-full rounded-xl pl-10 pr-4 py-3 font-dm text-sm text-gray-900 outline-none transition-all placeholder-gray-400"
@@ -299,25 +330,13 @@ export default function Login() {
                   </div>
                 </div>
 
-                <label className="flex items-center gap-2.5 cursor-pointer select-none">
-                  <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(e) => setRemember(e.target.checked)}
-                    className="w-4 h-4 rounded cursor-pointer"
-                    style={{ accentColor: "#c45c0a" }}
-                  />
-                  <span className="font-dm text-[0.88rem] text-gray-600">
-                    Remember this device
-                  </span>
-                </label>
-
                 <button
                   type="submit"
                   disabled={loading}
                   className="w-full text-white font-dm font-semibold text-[1rem] py-3.5 rounded-xl transition-all mt-1 disabled:opacity-60 disabled:cursor-not-allowed"
                   style={{
-                    background: "linear-gradient(90deg, #e05a2b 0%, #f0a500 100%)",
+                    background:
+                      "linear-gradient(90deg, #e05a2b 0%, #f0a500 100%)",
                   }}
                 >
                   {loading ? "Signing in..." : "Login to Dashboard"}
@@ -325,14 +344,20 @@ export default function Login() {
               </form>
 
               <div className="flex items-center gap-3 my-6">
-                <span className="flex-1 h-px" style={{ backgroundColor: "#e0ddd8" }} />
+                <span
+                  className="flex-1 h-px"
+                  style={{ backgroundColor: "#e0ddd8" }}
+                />
                 <span
                   className="font-dm text-[0.7rem] font-semibold tracking-widest whitespace-nowrap"
                   style={{ color: "#b0b0b0" }}
                 >
                   OR CONTINUE WITH
                 </span>
-                <span className="flex-1 h-px" style={{ backgroundColor: "#e0ddd8" }} />
+                <span
+                  className="flex-1 h-px"
+                  style={{ backgroundColor: "#e0ddd8" }}
+                />
               </div>
 
               <button
@@ -345,7 +370,10 @@ export default function Login() {
                 Google
               </button>
 
-              <p className="text-center font-dm text-[0.88rem] mt-5" style={{ color: "#7a7a7a" }}>
+              <p
+                className="text-center font-dm text-[0.88rem] mt-5"
+                style={{ color: "#7a7a7a" }}
+              >
                 New to Velofit?{" "}
                 <Link
                   href="/registration"
