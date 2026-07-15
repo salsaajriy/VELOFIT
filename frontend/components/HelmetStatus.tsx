@@ -155,13 +155,13 @@ export default function HelmetStatusCard() {
         */}
 
         {/* Indicator bahwa ada battery (nanti) */}
-        <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+        {/* <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
           <span className="text-xs text-gray-400">Status</span>
           <span className="text-xs font-medium text-green-600 flex items-center gap-1.5">
             <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
             Connected
           </span>
-        </div>
+        </div> */}
 
         {/* Action */}
         <div className="mt-2 text-[10px] text-orange-500 font-medium group-hover:underline text-right">

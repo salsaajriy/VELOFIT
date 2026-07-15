@@ -19,27 +19,30 @@ export default function TemperatureCard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchLatestTemperature = async (showLoading = false) => {
-        try {
-            if (showLoading) {
-                setLoading(true);
-            }
-
-            const res = await api.getRideHistory(1);
-
-            if (res.data.length > 0) {
-                const detail = await api.getRideDetail(res.data[0].id);
-                setLatestRide(detail as RideDetail);
-            }
-
-        } finally {
-            if (showLoading) {
-                setLoading(false);
-            }
-        }
+const fetchLatestTemperature = async (showLoading = false) => {
+  try {
+    if (showLoading) {
+      setLoading(true);
     }
 
-    fetchLatestTemperature();
+    const res = await api.getRideHistory(1);
+
+    if (res.data.length > 0) {
+      const detail = await api.getRideDetail(res.data[0].id);
+      setLatestRide(detail as RideDetail);
+    } else {
+      setLatestRide(null);
+    }
+  } catch (error) {
+    console.error("Failed to fetch latest temperature:", error);
+  } finally {
+    if (showLoading) {
+      setLoading(false);
+    }
+  }
+};
+
+    fetchLatestTemperature(true);
 
     // Refresh setiap 30 detik
     const interval = setInterval(fetchLatestTemperature, 30000);
@@ -88,10 +91,7 @@ export default function TemperatureCard() {
   // Data state
   const readings = latestRide.sensor_readings;
   const latestTemp = readings[readings.length - 1].body_temperature;
-  const avgTemp = readings.reduce((acc, r) => acc + r.body_temperature, 0) / readings.length;
-  const maxTemp = Math.max(...readings.map(r => r.body_temperature));
-  const minTemp = Math.min(...readings.map(r => r.body_temperature));
-  
+  const latestReading = readings[readings.length - 1];
   const isCritical = latestTemp >= 38.0;
   const isWarning = latestTemp >= 37.5;
   const status = isCritical ? 'Critical' : isWarning ? 'Warning' : 'Normal';
@@ -104,7 +104,7 @@ export default function TemperatureCard() {
   const progress = ((latestTemp - 35) / (40 - 35)) * 100;
   const clampedProgress = Math.min(100, Math.max(0, progress));
 
-  const recordedTime = new Date(readings[readings.length - 1].recorded_at);
+  const recordedTime = new Date(latestReading.recorded_at);
   const timeStr = recordedTime.toLocaleTimeString('id-ID', {
     hour: '2-digit',
     minute: '2-digit'
@@ -134,14 +134,13 @@ export default function TemperatureCard() {
       <div className="mt-4 flex items-end justify-between">
         <div>
           <p className="text-2xl font-black" style={{ color: statusColor }}>
-            {avgTemp.toFixed(1)}°C
+            {latestReading ? latestReading.body_temperature.toFixed(1) : 'N/A'}°C
           </p>
-          <p className="text-xs text-gray-400">Avg • {timeStr}</p>
+          <p className="text-xs text-gray-400">Latest • {timeStr}</p>
         </div>
         <div className="text-right">
           <div className="flex items-center gap-2 text-xs">
             <span className="text-gray-400">Latest <span className="font-bold text-gray-600">{latestTemp.toFixed(1)}°</span></span>
-            <span className="text-gray-400">Max <span className="font-bold text-red-400">{maxTemp.toFixed(1)}°</span></span>
           </div>
         </div>
       </div>
