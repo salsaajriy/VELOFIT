@@ -10,7 +10,7 @@ import TargetCard from "@/components/RecentTarget";
 import HelmetStatusCard from "@/components/HelmetStatus";
 import CompleteProfileModal from "@/components/CompleteProfile";
 import TemperatureCard from "@/components/TemperatureCard";
-import { Weather } from "@/types";
+import { Ride, Weather } from "@/types";
 import { getWeatherTheme } from "@/utils/weatherTheme";
 
 export default function DashboardPage() {
@@ -19,6 +19,8 @@ export default function DashboardPage() {
   const [weatherLoading, setWeatherLoading] = useState(true);
   const [rideActive, setRideActive] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
+  const [latestRide, setLatestRide] = useState<Ride | null>(null);
+  const [rideLoading, setRideLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -43,6 +45,25 @@ export default function DashboardPage() {
     };
 
     checkProfile();
+  }, []);
+
+
+  useEffect(() => {
+    const fetchLatestRide = async () => {
+      try {
+        const res = await api.getRideHistory(1);
+
+        if (res.data.length > 0) {
+          setLatestRide(res.data[0]);
+        }
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setRideLoading(false);
+      }
+    };
+
+    fetchLatestRide();
   }, []);
 
   useEffect(() => {
@@ -159,7 +180,13 @@ export default function DashboardPage() {
                 <p className="text-xs text-gray-400 font-medium mb-1">
                   Total Distance
                 </p>
-                <p className="text-xl font-black text-gray-900">0 km</p>
+                <p className="text-xl font-black text-gray-900">
+                    {rideLoading
+                      ? "--"
+                      : latestRide
+                      ? `${latestRide.distance} km`
+                      : "--"}
+                </p>
               </div>
 
               <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
@@ -176,7 +203,13 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <p className="text-xs text-gray-400 font-medium mb-1">Duration</p>
-                <p className="text-xl font-black text-gray-900">0m</p>
+                <p className="text-xl font-black text-gray-900">
+                  {rideLoading
+                    ? "--"
+                    : latestRide
+                    ? `${latestRide.duration} sec`
+                    : "--"}
+                </p>
               </div>
 
               <div className="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm">
@@ -193,7 +226,13 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <p className="text-xs text-gray-400 font-medium mb-1">Calories</p>
-                <p className="text-xl font-black text-gray-900">0 kcal</p>
+                <p className="text-xl font-black text-gray-900">
+                  {rideLoading
+                      ? "--"
+                      : latestRide
+                      ? `${latestRide.calories} kcal`
+                      : "--"}
+                </p>
               </div>
 
               <HelmetStatusCard />
