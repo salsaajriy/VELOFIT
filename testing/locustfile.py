@@ -13,7 +13,7 @@ accounts = [
         "email": f"loadtest{i}@gmail.com",
         "password": "password123"
     }
-    for i in range(1, 51)
+    for i in range(1, 1001)
 ]
 
 lock = threading.Lock()
@@ -83,11 +83,11 @@ class VelofitUser(HttpUser):
 
         # ================= Dashboard =================
 
-        self.client.get(
-            "/api/user/dashboard",
-            headers=self.headers,
-            name="Dashboard"
-        )
+        # self.client.get(
+        #     "/api/user/dashboard",
+        #     headers=self.headers,
+        #     name="Dashboard"
+        # )
 
         # ================= Start Ride =================
 
@@ -111,7 +111,7 @@ class VelofitUser(HttpUser):
 
         # ================= Sensor Data =================
 
-        for i in range(10):
+        for i in range(4):
 
             lat += random.uniform(0.00003, 0.00008)
             lon += random.uniform(0.00003, 0.00008)
@@ -152,10 +152,10 @@ class VelofitUser(HttpUser):
 
         # ================= History =================
 
-        self.client.get(
-            "/api/rides/history",
-            headers=self.headers,
-            name="History"
-        )
+        # self.client.get(
+        #     "/api/rides/history",
+        #     headers=self.headers,
+        #     name="History"
+        # )
 
         raise StopUser()

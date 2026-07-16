@@ -283,7 +283,7 @@ export function useRideTracker(): UseRideTrackerReturn {
     pausedDuration.current = elapsedTime;
     await flushBatch(); 
  
-    await rideService.pauseRide(activeRide.id);
+    // await rideService.pauseRide(activeRide.id);
     setStatus('paused');
   }, [activeRide, status, elapsedTime, flushBatch]);
  
@@ -291,7 +291,7 @@ export function useRideTracker(): UseRideTrackerReturn {
   const resumeRide = useCallback(async () => {
     if (!activeRide || status !== 'paused') return;
  
-    await rideService.resumeRide(activeRide.id);
+    // await rideService.resumeRide(activeRide.id);
     setStatus('tracking');
  
     watchIdRef.current = navigator.geolocation.watchPosition(
