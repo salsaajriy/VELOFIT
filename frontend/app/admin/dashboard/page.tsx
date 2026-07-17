@@ -1,24 +1,24 @@
 // app/admin/dashboard/page.tsx
 
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { 
-  FiGrid, 
-  FiLogOut, 
-  FiSearch, 
-  FiChevronLeft, 
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  FiGrid,
+  FiLogOut,
+  FiSearch,
+  FiChevronLeft,
   FiChevronRight,
   FiWifi,
   FiWifiOff,
   FiBattery,
   FiBatteryCharging,
-  FiAlertCircle
-} from 'react-icons/fi';
-import { FaHelmetSafety, FaMicrochip } from 'react-icons/fa6';
-import { HiOutlineUsers } from 'react-icons/hi2';
-import { MdOutlineSpeed, MdOutlineBatteryAlert } from 'react-icons/md';
+  FiAlertCircle,
+} from "react-icons/fi";
+import { FaHelmetSafety, FaMicrochip } from "react-icons/fa6";
+import { HiOutlineUsers } from "react-icons/hi2";
+import { MdOutlineSpeed, MdOutlineBatteryAlert } from "react-icons/md";
 
 // ============================================================
 // TYPES
@@ -45,7 +45,7 @@ interface HelmetData {
   battery_low: boolean;
   is_active: boolean;
   last_ping: string | null;
-  status: 'online' | 'offline' | 'low_battery' | 'inactive';
+  status: "online" | "offline" | "low_battery" | "inactive";
 }
 
 interface DashboardStats {
@@ -58,23 +58,24 @@ interface DashboardStats {
 // ============================================================
 export default function AdminDashboardPage() {
   const router = useRouter();
-  
+
   // States
   const [loading, setLoading] = useState(true);
-  const [adminName, setAdminName] = useState('Admin');
+  const [adminName, setAdminName] = useState("Admin");
   const [dashboardStats, setDashboardStats] = useState<DashboardStats>({
     total_users: 0,
-    total_admins: 0
+    total_admins: 0,
   });
   const [users, setUsers] = useState<UserWithHelmet[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<UserWithHelmet[]>([]);
   const [allHelmets, setAllHelmets] = useState<HelmetData[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [showOnlyHelmetUsers, setShowOnlyHelmetUsers] = useState(false);
-  
+
   const itemsPerPage = 8;
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+  const API_URL =
+    process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000/";
 
   // ============================================================
   // EFFECTS
@@ -92,18 +93,19 @@ export default function AdminDashboardPage() {
   // ============================================================
   const filterUsers = () => {
     let filtered = [...users];
-    
+
     if (searchTerm) {
-      filtered = filtered.filter(user => 
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase())
+      filtered = filtered.filter(
+        (user) =>
+          user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchTerm.toLowerCase()),
       );
     }
-    
+
     if (showOnlyHelmetUsers) {
-      filtered = filtered.filter(user => user.has_helmet);
+      filtered = filtered.filter((user) => user.has_helmet);
     }
-    
+
     setFilteredUsers(filtered);
     setCurrentPage(1);
   };
@@ -112,154 +114,175 @@ export default function AdminDashboardPage() {
   // DATA FETCHING
   // ============================================================
   const checkAuthAndFetchData = async () => {
-    const token = localStorage.getItem('token');
-    const role = localStorage.getItem('user_role');
-    const userDataStr = localStorage.getItem('user_data');
-    
-    if (!token || role !== 'admin') {
-      router.push('/login');
+    const token = localStorage.getItem("token");
+    const role = localStorage.getItem("user_role");
+    const userDataStr = localStorage.getItem("user_data");
+
+    if (!token || role !== "admin") {
+      router.push("/login");
       return;
     }
 
     if (userDataStr) {
       try {
         const userData = JSON.parse(userDataStr);
-        setAdminName(userData.name || 'Admin');
+        setAdminName(userData.name || "Admin");
       } catch (e) {}
     }
 
     await Promise.all([
       fetchDashboardStats(token),
       fetchUsersData(token),
-      fetchHelmetsData(token)
+      fetchHelmetsData(token),
     ]);
-    
+
     setLoading(false);
   };
 
   // Endpoint: GET /admin/dashboard
   const fetchDashboardStats = async (token: string) => {
     try {
-      const res = await fetch(`${API_URL}/admin/dashboard`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`${API_URL}` + `api/admin/dashboard`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (data.status && data.data) {
         setDashboardStats({
           total_users: data.data.status.total_users,
-          total_admins: data.data.status.total_admins
+          total_admins: data.data.status.total_admins,
         });
       }
     } catch (error) {
-      console.error('Failed to fetch dashboard stats:', error);
+      console.error("Failed to fetch dashboard stats:", error);
     }
   };
 
   // Endpoint: GET /admin/users
   const fetchUsersData = async (token: string) => {
     try {
-      const res = await fetch(`${API_URL}/admin/users`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`${API_URL}` + `api/admin/users`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (data.status && data.data) {
         setUsers(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch users:', error);
+      console.error("Failed to fetch users:", error);
     }
   };
 
   // Endpoint: GET /admin/helmets
   const fetchHelmetsData = async (token: string) => {
     try {
-      const res = await fetch(`${API_URL}/admin/helmets`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+      const res = await fetch(`${API_URL}` + `api/admin/helmets`, {
+        headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
       if (data.status && data.data) {
         setAllHelmets(data.data);
       }
     } catch (error) {
-      console.error('Failed to fetch helmets:', error);
+      console.error("Failed to fetch helmets:", error);
     }
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user_role');
-    localStorage.removeItem('user_data');
-    router.push('/login');
+    localStorage.removeItem("token");
+    localStorage.removeItem("user_role");
+    localStorage.removeItem("user_data");
+    router.push("/login");
   };
 
   const getInitials = (name: string) => {
     return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
       .toUpperCase()
       .slice(0, 2);
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'online': return 'bg-green-100 text-green-700';
-      case 'offline': return 'bg-gray-100 text-gray-500';
-      case 'low_battery': return 'bg-red-100 text-red-600';
-      default: return 'bg-gray-100 text-gray-500';
+      case "online":
+        return "bg-green-100 text-green-700";
+      case "offline":
+        return "bg-gray-100 text-gray-500";
+      case "low_battery":
+        return "bg-red-100 text-red-600";
+      default:
+        return "bg-gray-100 text-gray-500";
     }
   };
 
   const getStatusText = (status: string) => {
     switch (status) {
-      case 'online': return 'Online';
-      case 'offline': return 'Offline';
-      case 'low_battery': return 'Low Battery';
-      default: return 'Inactive';
+      case "online":
+        return "Online";
+      case "offline":
+        return "Offline";
+      case "low_battery":
+        return "Low Battery";
+      default:
+        return "Inactive";
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'online': return <FiWifi className="text-xs" />;
-      case 'offline': return <FiWifiOff className="text-xs" />;
-      case 'low_battery': return <MdOutlineBatteryAlert className="text-xs" />;
-      default: return <FiWifiOff className="text-xs" />;
+      case "online":
+        return <FiWifi className="text-xs" />;
+      case "offline":
+        return <FiWifiOff className="text-xs" />;
+      case "low_battery":
+        return <MdOutlineBatteryAlert className="text-xs" />;
+      default:
+        return <FiWifiOff className="text-xs" />;
     }
   };
 
   const getRandomAvatarColor = (email: string) => {
     const colors = [
-      { bg: 'bg-linear-to-br from-orange-400 to-amber-500' },
-      { bg: 'bg-linear-to-br from-blue-400 to-indigo-500' },
-      { bg: 'bg-linear-to-br from-green-400 to-emerald-500' },
-      { bg: 'bg-linear-to-br from-purple-400 to-violet-500' },
-      { bg: 'bg-linear-to-br from-pink-400 to-rose-500' },
-      { bg: 'bg-linear-to-br from-cyan-400 to-teal-500' },
+      { bg: "bg-linear-to-br from-orange-400 to-amber-500" },
+      { bg: "bg-linear-to-br from-blue-400 to-indigo-500" },
+      { bg: "bg-linear-to-br from-green-400 to-emerald-500" },
+      { bg: "bg-linear-to-br from-purple-400 to-violet-500" },
+      { bg: "bg-linear-to-br from-pink-400 to-rose-500" },
+      { bg: "bg-linear-to-br from-cyan-400 to-teal-500" },
     ];
     const index = email.length % colors.length;
     return colors[index];
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
     });
   };
 
   // Hitung statistik dari data helmets yang ada
   const getHelmetStats = () => {
     const total_helmets = allHelmets.length;
-    const active_helmets = allHelmets.filter(h => h.is_active).length;
-    const online_helmets = allHelmets.filter(h => h.status === 'online').length;
-    const low_battery_helmets = allHelmets.filter(h => h.battery_low).length;
-    const helmet_usage_rate = total_helmets > 0 
-      ? Math.round((active_helmets / total_helmets) * 100) 
-      : 0;
-    
-    return { total_helmets, active_helmets, online_helmets, low_battery_helmets, helmet_usage_rate };
+    const active_helmets = allHelmets.filter((h) => h.is_active).length;
+    const online_helmets = allHelmets.filter(
+      (h) => h.status === "online",
+    ).length;
+    const low_battery_helmets = allHelmets.filter((h) => h.battery_low).length;
+    const helmet_usage_rate =
+      total_helmets > 0
+        ? Math.round((active_helmets / total_helmets) * 100)
+        : 0;
+
+    return {
+      total_helmets,
+      active_helmets,
+      online_helmets,
+      low_battery_helmets,
+      helmet_usage_rate,
+    };
   };
 
   const helmetStats = getHelmetStats();
@@ -268,7 +291,7 @@ export default function AdminDashboardPage() {
   const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
   const paginatedUsers = filteredUsers.slice(
     (currentPage - 1) * itemsPerPage,
-    currentPage * itemsPerPage
+    currentPage * itemsPerPage,
   );
 
   if (loading) {
@@ -315,8 +338,12 @@ export default function AdminDashboardPage() {
                 </span>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-semibold text-slate-900">{adminName}</p>
-                <p className="text-xs text-slate-500 capitalize">Administrator</p>
+                <p className="text-sm font-semibold text-slate-900">
+                  {adminName}
+                </p>
+                <p className="text-xs text-slate-500 capitalize">
+                  Administrator
+                </p>
               </div>
               <button
                 onClick={handleLogout}
@@ -346,11 +373,11 @@ export default function AdminDashboardPage() {
               </div>
               <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-slate-600">
-                  {new Date().toLocaleDateString('en-US', {
-                    weekday: 'long',
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
+                  {new Date().toLocaleDateString("en-US", {
+                    weekday: "long",
+                    year: "numeric",
+                    month: "long",
+                    day: "numeric",
                   })}
                 </p>
                 <p className="text-xs text-slate-400">
@@ -371,10 +398,16 @@ export default function AdminDashboardPage() {
                   <div className="h-12 w-12 rounded-xl bg-linear-to-br from-blue-50 to-indigo-50 flex items-center justify-center">
                     <HiOutlineUsers className="text-2xl text-blue-600" />
                   </div>
-                  <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">Users</span>
+                  <span className="text-xs font-medium text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                    Users
+                  </span>
                 </div>
-                <p className="text-3xl font-bold text-slate-800">{dashboardStats.total_users.toLocaleString()}</p>
-                <p className="text-sm text-slate-500 mt-1">Total Registered Users</p>
+                <p className="text-3xl font-bold text-slate-800">
+                  {dashboardStats.total_users.toLocaleString()}
+                </p>
+                <p className="text-sm text-slate-500 mt-1">
+                  Total Registered Users
+                </p>
               </div>
 
               {/* Total Helmets Card */}
@@ -383,10 +416,16 @@ export default function AdminDashboardPage() {
                   <div className="h-12 w-12 rounded-xl bg-linear-to-br from-orange-50 to-amber-50 flex items-center justify-center">
                     <FaHelmetSafety className="text-2xl text-orange-600" />
                   </div>
-                  <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">Devices</span>
+                  <span className="text-xs font-medium text-orange-600 bg-orange-50 px-2 py-1 rounded-full">
+                    Devices
+                  </span>
                 </div>
-                <p className="text-3xl font-bold text-slate-800">{helmetStats.total_helmets.toLocaleString()}</p>
-                <p className="text-sm text-slate-500 mt-1">Total Connected Helmets</p>
+                <p className="text-3xl font-bold text-slate-800">
+                  {helmetStats.total_helmets.toLocaleString()}
+                </p>
+                <p className="text-sm text-slate-500 mt-1">
+                  Total Connected Helmets
+                </p>
               </div>
 
               {/* Online Helmets Card */}
@@ -395,9 +434,13 @@ export default function AdminDashboardPage() {
                   <div className="h-12 w-12 rounded-xl bg-linear-to-br from-green-50 to-emerald-50 flex items-center justify-center">
                     <FiWifi className="text-2xl text-green-600" />
                   </div>
-                  <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">Live</span>
+                  <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
+                    Live
+                  </span>
                 </div>
-                <p className="text-3xl font-bold text-slate-800">{helmetStats.online_helmets.toLocaleString()}</p>
+                <p className="text-3xl font-bold text-slate-800">
+                  {helmetStats.online_helmets.toLocaleString()}
+                </p>
                 <p className="text-sm text-slate-500 mt-1">Currently Online</p>
               </div>
 
@@ -407,9 +450,13 @@ export default function AdminDashboardPage() {
                   <div className="h-12 w-12 rounded-xl bg-linear-to-br from-purple-50 to-violet-50 flex items-center justify-center">
                     <MdOutlineSpeed className="text-2xl text-purple-600" />
                   </div>
-                  <span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">Rate</span>
+                  <span className="text-xs font-medium text-purple-600 bg-purple-50 px-2 py-1 rounded-full">
+                    Rate
+                  </span>
                 </div>
-                <p className="text-3xl font-bold text-slate-800">{helmetStats.helmet_usage_rate}%</p>
+                <p className="text-3xl font-bold text-slate-800">
+                  {helmetStats.helmet_usage_rate}%
+                </p>
                 <p className="text-sm text-slate-500 mt-1">Helmet Usage Rate</p>
               </div>
             </div>
@@ -419,7 +466,11 @@ export default function AdminDashboardPage() {
               <div className="mt-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-center gap-3">
                 <FiAlertCircle className="text-amber-600 text-xl" />
                 <p className="text-sm text-amber-800">
-                  <span className="font-semibold">{helmetStats.low_battery_helmets} helmets</span> have low battery (&lt;20%). Please remind users to charge their devices.
+                  <span className="font-semibold">
+                    {helmetStats.low_battery_helmets} helmets
+                  </span>{" "}
+                  have low battery (&lt;20%). Please remind users to charge
+                  their devices.
                 </p>
               </div>
             )}
@@ -431,7 +482,9 @@ export default function AdminDashboardPage() {
               {/* Table Header with Filters */}
               <div className="flex flex-col gap-4 border-b border-slate-100 px-6 py-5 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-slate-800">Users & Helmets Monitoring</h2>
+                  <h2 className="text-xl font-semibold text-slate-800">
+                    Users & Helmets Monitoring
+                  </h2>
                   <p className="mt-1 text-sm text-slate-500">
                     Monitor all users and their connected helmet status
                   </p>
@@ -455,12 +508,12 @@ export default function AdminDashboardPage() {
                     onClick={() => setShowOnlyHelmetUsers(!showOnlyHelmetUsers)}
                     className={`inline-flex h-11 items-center justify-center gap-2 rounded-xl px-4 text-sm font-medium transition-all ${
                       showOnlyHelmetUsers
-                        ? 'bg-orange-600 text-white shadow-md'
-                        : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                        ? "bg-orange-600 text-white shadow-md"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                     }`}
                   >
                     <FaHelmetSafety className="text-sm" />
-                    {showOnlyHelmetUsers ? 'With Helmets Only' : 'All Users'}
+                    {showOnlyHelmetUsers ? "With Helmets Only" : "All Users"}
                   </button>
                 </div>
               </div>
@@ -493,7 +546,10 @@ export default function AdminDashboardPage() {
                   <tbody>
                     {paginatedUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
+                        <td
+                          colSpan={6}
+                          className="px-6 py-12 text-center text-slate-500"
+                        >
                           No users found
                         </td>
                       </tr>
@@ -501,25 +557,39 @@ export default function AdminDashboardPage() {
                       paginatedUsers.map((user) => {
                         const avatarColor = getRandomAvatarColor(user.email);
                         const activeHelmet = user.active_helmet;
-                        const activeHelmetData = user.helmets.find(h => h.is_active);
-                        const helmetStatus = activeHelmetData?.status || 'inactive';
-                        
+                        const activeHelmetData = user.helmets.find(
+                          (h) => h.is_active,
+                        );
+                        const helmetStatus =
+                          activeHelmetData?.status || "inactive";
+
                         return (
-                          <tr key={user.id} className="border-b border-slate-100 transition-colors hover:bg-slate-50/50">
+                          <tr
+                            key={user.id}
+                            className="border-b border-slate-100 transition-colors hover:bg-slate-50/50"
+                          >
                             <td className="px-6 py-4">
                               <div className="flex items-center gap-3">
-                                <div className={`flex h-9 w-9 items-center justify-center rounded-full ${avatarColor.bg} text-white shadow-sm text-sm font-semibold`}>
+                                <div
+                                  className={`flex h-9 w-9 items-center justify-center rounded-full ${avatarColor.bg} text-white shadow-sm text-sm font-semibold`}
+                                >
                                   {getInitials(user.name)}
                                 </div>
-                                <span className="font-medium text-slate-800">{user.name}</span>
+                                <span className="font-medium text-slate-800">
+                                  {user.name}
+                                </span>
                               </div>
                             </td>
-                            <td className="px-6 py-4 text-sm text-slate-500">{user.email}</td>
+                            <td className="px-6 py-4 text-sm text-slate-500">
+                              {user.email}
+                            </td>
                             <td className="px-6 py-4">
                               {user.has_helmet && activeHelmet ? (
                                 <div className="flex items-center gap-2">
                                   <FaMicrochip className="text-slate-400 text-sm" />
-                                  <span className="text-sm font-medium text-slate-700">{activeHelmet.device_name}</span>
+                                  <span className="text-sm font-medium text-slate-700">
+                                    {activeHelmet.device_name}
+                                  </span>
                                 </div>
                               ) : (
                                 <span className="text-sm text-slate-400 flex items-center gap-1">
@@ -538,19 +608,27 @@ export default function AdminDashboardPage() {
                                   ) : (
                                     <FiBattery className="text-yellow-500 text-sm" />
                                   )}
-                                  <span className={`text-sm font-medium ${
-                                    activeHelmet.battery < 20 ? 'text-red-600' : 'text-slate-600'
-                                  }`}>
+                                  <span
+                                    className={`text-sm font-medium ${
+                                      activeHelmet.battery < 20
+                                        ? "text-red-600"
+                                        : "text-slate-600"
+                                    }`}
+                                  >
                                     {activeHelmet.battery}%
                                   </span>
                                 </div>
                               ) : (
-                                <span className="text-sm text-slate-400">—</span>
+                                <span className="text-sm text-slate-400">
+                                  —
+                                </span>
                               )}
                             </td>
                             <td className="px-6 py-4">
                               {user.has_helmet ? (
-                                <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(helmetStatus)}`}>
+                                <span
+                                  className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${getStatusColor(helmetStatus)}`}
+                                >
                                   {getStatusIcon(helmetStatus)}
                                   {getStatusText(helmetStatus)}
                                 </span>
@@ -576,47 +654,54 @@ export default function AdminDashboardPage() {
               {filteredUsers.length > 0 && (
                 <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100">
                   <p className="text-sm text-slate-500">
-                    Showing {((currentPage - 1) * itemsPerPage) + 1} to {Math.min(currentPage * itemsPerPage, filteredUsers.length)} of {filteredUsers.length} users
+                    Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+                    {Math.min(currentPage * itemsPerPage, filteredUsers.length)}{" "}
+                    of {filteredUsers.length} users
                   </p>
 
                   <div className="flex items-center gap-2">
                     <button
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       disabled={currentPage === 1}
                       className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-orange-300 hover:text-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <FiChevronLeft />
                     </button>
                     <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let pageNum;
-                        if (totalPages <= 5) {
-                          pageNum = i + 1;
-                        } else if (currentPage <= 3) {
-                          pageNum = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          pageNum = totalPages - 4 + i;
-                        } else {
-                          pageNum = currentPage - 2 + i;
-                        }
-                        
-                        return (
-                          <button
-                            key={pageNum}
-                            onClick={() => setCurrentPage(pageNum)}
-                            className={`h-9 w-9 rounded-lg text-sm font-medium transition-all ${
-                              currentPage === pageNum
-                                ? 'bg-orange-600 text-white shadow-sm'
-                                : 'text-slate-600 hover:bg-slate-100'
-                            }`}
-                          >
-                            {pageNum}
-                          </button>
-                        );
-                      })}
+                      {Array.from(
+                        { length: Math.min(5, totalPages) },
+                        (_, i) => {
+                          let pageNum;
+                          if (totalPages <= 5) {
+                            pageNum = i + 1;
+                          } else if (currentPage <= 3) {
+                            pageNum = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            pageNum = totalPages - 4 + i;
+                          } else {
+                            pageNum = currentPage - 2 + i;
+                          }
+
+                          return (
+                            <button
+                              key={pageNum}
+                              onClick={() => setCurrentPage(pageNum)}
+                              className={`h-9 w-9 rounded-lg text-sm font-medium transition-all ${
+                                currentPage === pageNum
+                                  ? "bg-orange-600 text-white shadow-sm"
+                                  : "text-slate-600 hover:bg-slate-100"
+                              }`}
+                            >
+                              {pageNum}
+                            </button>
+                          );
+                        },
+                      )}
                     </div>
                     <button
-                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      onClick={() =>
+                        setCurrentPage((p) => Math.min(totalPages, p + 1))
+                      }
                       disabled={currentPage === totalPages}
                       className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-all hover:border-orange-300 hover:text-orange-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -649,7 +734,10 @@ export default function AdminDashboardPage() {
               </div>
               <div className="flex items-center gap-2">
                 <FaHelmetSafety className="text-xs" />
-                <span>{users.filter(u => u.has_helmet).length} of {users.length} users have connected helmets</span>
+                <span>
+                  {users.filter((u) => u.has_helmet).length} of {users.length}{" "}
+                  users have connected helmets
+                </span>
               </div>
             </div>
           </div>

@@ -50,7 +50,7 @@ export default function SignupPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/register`, {
+      const res = await fetch(`${BACKEND_URL}` + `api/auth/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -90,7 +90,7 @@ export default function SignupPage() {
     console.log("GOOGLE REGISTER CLICKED");
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/google`);
+      const res = await fetch(`${BACKEND_URL}` + `api/auth/google`);
       const data = await res.json();
 
       if (data.redirect_url) {

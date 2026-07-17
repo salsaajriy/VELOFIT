@@ -12,7 +12,7 @@ export default function ForgotPassword() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!email) {
       setError("Email is Required");
       return;
@@ -24,14 +24,14 @@ export default function ForgotPassword() {
 
     try {
       const response = await fetch(
-        "http://localhost:8000/api/forgot-password",
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}` + `api/forgot-password`,
         {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({ email }),
-        }
+        },
       );
 
       const data = await response.json();
@@ -54,10 +54,12 @@ export default function ForgotPassword() {
       <div className="w-full max-w-md">
         {/* Card Container */}
         <div className="bg-white rounded-md shadow-2xl overflow-hidden border border-gray-100">
-          <div className="relative h-32"
-          style={{
-                    background: "linear-gradient(90deg, #e05a2b 0%, #f0a500 100%)",
-                  }}>
+          <div
+            className="relative h-32"
+            style={{
+              background: "linear-gradient(90deg, #e05a2b 0%, #f0a500 100%)",
+            }}
+          >
             <div className="absolute inset-0 bg-black opacity-10"></div>
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="text-center">
@@ -78,7 +80,8 @@ export default function ForgotPassword() {
                 Forgot Password?
               </h1>
               <p className="text-sm text-gray-600">
-                Dont worry! Enter your email and we will send you a password reset link.
+                Dont worry! Enter your email and we will send you a password
+                reset link.
               </p>
             </div>
 
@@ -107,7 +110,10 @@ export default function ForgotPassword() {
 
             <form onSubmit={submit} className="space-y-6">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700 mb-2"
+                >
                   Email Address
                 </label>
                 <div className="relative">
@@ -132,15 +138,32 @@ export default function ForgotPassword() {
                 disabled={loading || success}
                 className="w-full relative overflow-hidden group text-white font-semibold py-3 px-4 rounded-md transition-all duration-300 hover:shadow-lg hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 style={{
-                    background: "linear-gradient(90deg, #e05a2b 0%, #f0a500 100%)",
-                  }}
+                  background:
+                    "linear-gradient(90deg, #e05a2b 0%, #f0a500 100%)",
+                }}
               >
                 <span className="relative z-10 flex items-center justify-center gap-2">
                   {loading ? (
                     <>
-                      <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
                       </svg>
                       Send...
                     </>

@@ -64,7 +64,7 @@ export default function Navbar() {
           return;
         }
         
-        const res = await fetch("http://127.0.0.1:8000/api/user/profile", {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}` + `api/user/profile`, {
           headers: {
             Accept: "application/json",
             Authorization: `Bearer ${token}`,
@@ -99,7 +99,7 @@ export default function Navbar() {
     try {
       const token = localStorage.getItem("token");
       if (token) {
-        await fetch("http://127.0.0.1:8000/api/auth/logout", {
+        await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}` + `api/auth/logout`, {
           method: 'POST',
           headers: {
             Accept: "application/json",

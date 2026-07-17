@@ -18,6 +18,9 @@ export default function ResetPasswordContent() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
+  const BACKEND_URL =
+    process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+
   useEffect(() => {
     if (!email || !token) {
       setError(
@@ -49,7 +52,7 @@ export default function ResetPasswordContent() {
     setError("");
 
     try {
-      const response = await fetch("http://localhost:8000/api/reset-password", {
+      const response = await fetch(`${BACKEND_URL}` + `api/reset-password`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

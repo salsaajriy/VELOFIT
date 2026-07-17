@@ -25,9 +25,9 @@ export default function AuthCallbackContent() {
       localStorage.setItem("token", token);
 
       const BACKEND_URL =
-        process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+        process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000/";
 
-      fetch(`${BACKEND_URL}/api/user/profile`, {
+      fetch(`${BACKEND_URL}` + `api/user/profile`, {
         headers: {
           Authorization: `Bearer ${token}`,
           Accept: "application/json",

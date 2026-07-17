@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import Image from 'next/image';
-import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import {
   FiGrid,
   FiClock,
@@ -13,38 +13,38 @@ import {
   FiMenu,
   FiX,
   FiLogOut,
-} from 'react-icons/fi';
-import { FaHelmetSafety } from 'react-icons/fa6';
+} from "react-icons/fi";
+import { FaHelmetSafety } from "react-icons/fa6";
 
 const navItems = [
   {
-    label: 'Dashboard',
-    href: '/dashboard',
+    label: "Dashboard",
+    href: "/dashboard",
     icon: FiGrid,
   },
   {
-    label: 'History',
-    href: '/history',
+    label: "History",
+    href: "/history",
     icon: FiClock,
   },
   {
-    label: 'Body Temperature',
-    href: '/temperature',
+    label: "Body Temperature",
+    href: "/temperature",
     icon: FiThermometer,
   },
   {
-    label: 'Manage Helmets',
-    href: '/helmets',
+    label: "Manage Helmets",
+    href: "/helmets",
     icon: FaHelmetSafety,
   },
   {
-    label: 'Goal Achievement',
-    href: '/target',
+    label: "Goal Achievement",
+    href: "/target",
     icon: FiTarget,
   },
   {
-    label: 'Profile',
-    href: '/profile',
+    label: "Profile",
+    href: "/profile",
     icon: FiUser,
   },
 ];
@@ -65,17 +65,15 @@ function SidebarContent({
       {/* Logo */}
       <div className="flex items-center justify-between border-b border-gray-100 px-4 py-5">
         <div className="flex items-center gap-2.5">
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-          >
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
             <Image
-                src="/images/logo-velofit.jpeg"
-                alt="Velofit Logo"
-                width={36}
-                height={36}
-                className="h-full w-full object-contain"  // ← GANTI object-cover → object-contain
-                priority
-              />
+              src="/images/logo-velofit.jpeg"
+              alt="Velofit Logo"
+              width={36}
+              height={36}
+              className="h-full w-full object-contain" // ← GANTI object-cover → object-contain
+              priority
+            />
           </div>
           <span className="text-base font-black tracking-tight text-gray-900">
             Velofit
@@ -105,11 +103,11 @@ function SidebarContent({
               onClick={onClose || undefined}
               className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-150 ${
                 isActive
-                  ? 'bg-amber-50 text-amber-700'
-                  : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'
+                  ? "bg-amber-50 text-amber-700"
+                  : "text-gray-500 hover:bg-gray-50 hover:text-gray-800"
               }`}
             >
-              <span className={isActive ? 'text-amber-600' : 'text-gray-400'}>
+              <span className={isActive ? "text-amber-600" : "text-gray-400"}>
                 <Icon className="h-5 w-5" />
               </span>
               {item.label}
@@ -124,7 +122,7 @@ function SidebarContent({
             {user?.avatar ? (
               <Image
                 src={user.avatar}
-                alt={`${user?.name ?? 'User'} avatar`}
+                alt={`${user?.name ?? "User"} avatar`}
                 width={32}
                 height={32}
                 className="h-8 w-8 rounded-full object-cover"
@@ -132,14 +130,14 @@ function SidebarContent({
               />
             ) : (
               <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-200 text-sm font-bold text-amber-700">
-                {user?.name?.charAt(0) || 'U'}
+                {user?.name?.charAt(0) || "U"}
               </div>
             )}
             <div>
               <p className="text-sm font-semibold leading-tight text-gray-800">
-                {user?.name || 'Loading...'}
+                {user?.name || "Loading..."}
               </p>
-              <p className="text-xs text-gray-400">{user?.role || 'User'}</p>
+              <p className="text-xs text-gray-400">{user?.role || "User"}</p>
             </div>
           </Link>
         </div>
@@ -163,7 +161,11 @@ function SidebarContent({
 
 export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [user, setUser] = useState<{ name: string; role: string; avatar?: string } | null>(null);
+  const [user, setUser] = useState<{
+    name: string;
+    role: string;
+    avatar?: string;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const pathname = usePathname();
   const router = useRouter();
@@ -173,11 +175,11 @@ export default function Sidebar() {
       try {
         const token = localStorage.getItem("token");
         if (!token) {
-          router.push('/login');
+          router.push("/login");
           return;
         }
-        
-        const res = await fetch("http://127.0.0.1:8000/api/user/profile", {
+
+        const res = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL}` + `api/user/profile`, {
           headers: {
             Accept: "application/json",
             Authorization: `Bearer ${token}`,
@@ -186,19 +188,19 @@ export default function Sidebar() {
 
         if (res.status === 401) {
           localStorage.removeItem("token");
-          router.push('/login');
+          router.push("/login");
           return;
         }
 
         const response = await res.json();
         console.log("SIDEBAR RESPONSE:", response);
-        
+
         // PERBAIKAN: Ambil data dari response.data
         const userData = response.data || response;
-        
+
         setUser({
-          name: userData.name || 'User',
-          role: userData.role || 'user',
+          name: userData.name || "User",
+          role: userData.role || "user",
           avatar: userData.avatar || null,
         });
       } catch (err) {
@@ -215,20 +217,23 @@ export default function Sidebar() {
     try {
       const token = localStorage.getItem("token");
       if (token) {
-        await fetch("http://127.0.0.1:8000/api/auth/logout", {
-          method: 'POST',
-          headers: {
-            Accept: "application/json",
-            Authorization: `Bearer ${token}`,
+        await fetch(
+          `${process.env.NEXT_PUBLIC_BACKEND_URL}` + `api/auth/logout`,
+          {
+            method: "POST",
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${token}`,
+            },
           },
-        }).catch(() => {
+        ).catch(() => {
           // Even if server logout fails, clear local data
         });
       }
     } finally {
       localStorage.removeItem("token");
       setUser(null);
-      router.push('/login');
+      router.push("/login");
     }
   };
 
@@ -247,7 +252,10 @@ export default function Sidebar() {
             </div>
             <div className="flex-1 px-3 py-4 space-y-2">
               {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div key={i} className="h-10 bg-gray-200 rounded-xl animate-pulse"></div>
+                <div
+                  key={i}
+                  className="h-10 bg-gray-200 rounded-xl animate-pulse"
+                ></div>
               ))}
             </div>
             <div className="border-t border-gray-100 p-4">
@@ -261,7 +269,7 @@ export default function Sidebar() {
             </div>
           </div>
         </aside>
-        
+
         {/* Mobile Top Bar Loading */}
         <header className="fixed left-0 right-0 top-0 z-30 flex h-14 items-center justify-between border-b border-gray-100 bg-white px-4 lg:hidden">
           <div className="flex items-center gap-2.5">
@@ -278,7 +286,12 @@ export default function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <aside className="fixed z-20 hidden h-full w-52 shrink-0 flex-col border-r border-gray-100 bg-white lg:flex">
-        <SidebarContent pathname={pathname} onClose={null} user={user} onLogout={handleLogout} />
+        <SidebarContent
+          pathname={pathname}
+          onClose={null}
+          user={user}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Mobile Top Bar */}
@@ -286,7 +299,7 @@ export default function Sidebar() {
         <div className="flex items-center gap-2.5">
           <div
             className="flex h-7 w-7 items-center justify-center rounded-lg"
-            style={{ background: 'linear-gradient(135deg, #f97316, #3b82f6)' }}
+            style={{ background: "linear-gradient(135deg, #f97316, #3b82f6)" }}
           >
             <svg viewBox="0 0 24 24" fill="white" className="h-3.5 w-3.5">
               <circle cx="12" cy="12" r="3" />
@@ -318,13 +331,13 @@ export default function Sidebar() {
       {/* Mobile Drawer */}
       <aside
         className={`fixed left-0 top-0 z-50 h-full w-64 bg-white shadow-2xl transition-transform duration-300 ease-in-out lg:hidden ${
-          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+          mobileOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <SidebarContent 
-          pathname={pathname} 
-          onClose={() => setMobileOpen(false)} 
-          user={user} 
+        <SidebarContent
+          pathname={pathname}
+          onClose={() => setMobileOpen(false)}
+          user={user}
           onLogout={handleLogout}
         />
       </aside>

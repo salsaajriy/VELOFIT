@@ -102,7 +102,7 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}api/auth/google`);
+      const res = await fetch(`${BACKEND_URL}` + `api/auth/google`);
       const data = await res.json();
 
       console.log("GOOGLE LOGIN RESPONSE:", data);
