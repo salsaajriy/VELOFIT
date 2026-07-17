@@ -55,7 +55,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/login`, {
+      const res = await fetch(`${BACKEND_URL}api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -102,7 +102,7 @@ export default function Login() {
 
   const handleGoogleLogin = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/api/auth/google`);
+      const res = await fetch(`${BACKEND_URL}api/auth/google`);
       const data = await res.json();
 
       console.log("GOOGLE LOGIN RESPONSE:", data);
